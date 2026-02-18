@@ -16,11 +16,11 @@ export default function Home() {
               <span className="text-2xl font-bold text-white">Audience Lab</span>
             </div>
             <div className="flex gap-4">
-              <Link href="/dashboard" className="text-white hover:text-purple-300 transition">
-                Dashboard
+              <Link href="/login" className="text-white hover:text-purple-300 transition">
+                Login
               </Link>
-              <Link href="/docs" className="text-white hover:text-purple-300 transition">
-                Docs
+              <Link href="/signup" className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
+                Sign Up
               </Link>
             </div>
           </div>
