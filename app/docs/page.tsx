@@ -43,7 +43,7 @@ export default function Docs() {
         </Section>
 
         <Section icon={<Code />} title="2. Install Tracking Script">
-          <p className="mb-4">Add this script to your website's HTML:</p>
+          <p className="mb-4">Add this script to your website&apos;s HTML:</p>
           <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
 {`<script src="https://your-domain.vercel.app/track.js"></script>`}
           </pre>
