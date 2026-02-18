@@ -6,6 +6,9 @@ import { Eye, Users, TrendingUp, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export default function Dashboard() {
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [stats, setStats] = useState({
