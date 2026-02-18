@@ -30,46 +30,16 @@ export default function Docs() {
         </p>
 
         <Section icon={<Database />} title="1. Setup Supabase">
-          <p className="mb-4">Create a new Supabase project and run this SQL:</p>
-          <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
-{`-- Create visitors table
-CREATE TABLE visitors (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  session_id TEXT UNIQUE NOT NULL,
-  ip_address TEXT,
-  user_agent TEXT,
-  country TEXT,
-  city TEXT,
-  company TEXT,
-  email TEXT,
-  name TEXT,
-  linkedin_url TEXT,
-  first_seen TIMESTAMP DEFAULT NOW(),
-  last_seen TIMESTAMP DEFAULT NOW(),
-  page_views INTEGER DEFAULT 1,
-  identified BOOLEAN DEFAULT FALSE
-);
-
--- Create page_views table
-CREATE TABLE page_views (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  visitor_id UUID REFERENCES visitors(id),
-  session_id TEXT NOT NULL,
-  url TEXT NOT NULL,
-  title TEXT,
-  referrer TEXT,
-  timestamp TIMESTAMP DEFAULT NOW(),
-  duration INTEGER
-);
-
--- Enable realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE visitors;
-
--- Create indexes
-CREATE INDEX idx_visitors_session ON visitors(session_id);
-CREATE INDEX idx_visitors_email ON visitors(email);
-CREATE INDEX idx_page_views_visitor ON page_views(visitor_id);`}
-          </pre>
+          <p className="mb-4">Create a new Supabase project and run the SQL schema:</p>
+          <ol className="list-decimal list-inside space-y-2 mb-4">
+            <li>Go to your Supabase project dashboard</li>
+            <li>Navigate to SQL Editor</li>
+            <li>Copy the contents of <code className="bg-gray-100 px-2 py-1 rounded">supabase/schema.sql</code></li>
+            <li>Paste and run the SQL</li>
+          </ol>
+          <p className="text-sm text-gray-600">
+            The schema includes visitors and page_views tables, indexes, RLS policies, and real-time subscriptions.
+          </p>
         </Section>
 
         <Section icon={<Code />} title="2. Install Tracking Script">

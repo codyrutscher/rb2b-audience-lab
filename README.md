@@ -23,8 +23,8 @@ npm install
 ### 2. Setup Supabase
 
 1. Create a new project at [supabase.com](https://supabase.com)
-2. Run the SQL from `/app/docs/page.tsx` in your Supabase SQL editor
-3. Copy your project URL and keys
+2. Go to SQL Editor and run the contents of `supabase/schema.sql`
+3. Copy your project URL and keys from Settings > API
 
 ### 3. Configure Environment
 
