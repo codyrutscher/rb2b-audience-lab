@@ -2,6 +2,10 @@ import Link from "next/link";
 import { Eye, Users, Zap, BarChart3 } from "lucide-react";
 
 export default function Home() {
+  console.log('=== HOME PAGE RENDERING ===');
+  console.log('Environment:', process.env.NODE_ENV);
+  console.log('Timestamp:', new Date().toISOString());
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <nav className="border-b border-white/10 bg-black/20 backdrop-blur-sm">
