@@ -117,15 +117,17 @@ CREATE POLICY "Admins can manage integrations" ON integrations
 -- Function to create workspace on user signup
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  new_workspace_id UUID;
 BEGIN
   -- Create a default workspace for the new user
   INSERT INTO workspaces (name)
-  VALUES (COALESCE(NEW.raw_user_meta_data->>'company', 'My Workspace'))
-  RETURNING id INTO NEW.id;
+  VALUES (COALESCE(NEW.raw_user_meta_data->>'full_name', 'My Workspace') || '''s Workspace')
+  RETURNING id INTO new_workspace_id;
   
   -- Add user as owner of the workspace
   INSERT INTO user_workspaces (user_id, workspace_id, role)
-  VALUES (NEW.id, NEW.id, 'owner');
+  VALUES (NEW.id, new_workspace_id, 'owner');
   
   RETURN NEW;
 END;
