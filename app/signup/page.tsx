@@ -19,12 +19,18 @@ export default function SignupPage() {
     setError("");
     setLoading(true);
 
-    const { error } = await signUp(email, password, fullName);
+    console.log('Attempting signup with:', { email, fullName });
+
+    const { data, error } = await signUp(email, password, fullName);
+
+    console.log('Signup response:', { data, error });
 
     if (error) {
+      console.error('Signup error:', error);
       setError(error.message);
       setLoading(false);
     } else {
+      console.log('Signup successful, redirecting to dashboard');
       router.push("/dashboard");
     }
   }
