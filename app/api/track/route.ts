@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseClient();
   try {
     const body = await request.json();
-    const { sessionId, url, title, referrer } = body;
+    const { sessionId, workspaceId, url, title, referrer } = body;
 
     // Get IP and user agent
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
         .from('visitors')
         .insert({
           session_id: sessionId,
+          workspace_id: workspaceId || null,
           ip_address: ip,
           user_agent: userAgent,
           page_views: 1,

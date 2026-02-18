@@ -67,6 +67,9 @@ export default function Dashboard() {
               <Link href="/dashboard" className="text-purple-600 font-medium">
                 Dashboard
               </Link>
+              <Link href="/dashboard/install" className="text-gray-600 hover:text-gray-900">
+                Install
+              </Link>
               <Link href="/docs" className="text-gray-600 hover:text-gray-900">
                 Docs
               </Link>
@@ -77,6 +80,23 @@ export default function Dashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold mb-8">Visitor Dashboard</h1>
+
+        {stats.total === 0 && (
+          <div className="mb-8 p-6 bg-purple-50 border border-purple-200 rounded-lg">
+            <h3 className="text-lg font-semibold text-purple-900 mb-2">
+              🚀 Get Started: Install Tracking Script
+            </h3>
+            <p className="text-purple-800 mb-4">
+              You haven&apos;t tracked any visitors yet. Install the tracking script on your website to start identifying visitors.
+            </p>
+            <Link
+              href="/dashboard/install"
+              className="inline-block px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition"
+            >
+              View Installation Instructions
+            </Link>
+          </div>
+        )}
 
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <StatCard icon={<Users />} label="Total Visitors" value={stats.total} />
