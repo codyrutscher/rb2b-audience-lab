@@ -39,7 +39,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     applyFilters();
-  }, [visitors, searchTerm, filterIdentified, filterDevice]);
+  }, [visitors, searchTerm, filterIdentified, filterDevice]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadVisitors() {
     const { data } = await supabase

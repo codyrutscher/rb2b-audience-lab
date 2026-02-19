@@ -145,7 +145,7 @@ async function sendSlackNotification(webhookUrl: string, visitor: VisitorNotific
           text: '🔄 *Returning visitor*',
         },
       ],
-    });
+    } as any);
   }
 
   const payload = {
