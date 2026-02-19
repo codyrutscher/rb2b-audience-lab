@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { lookupIPWithFallback } from '@/lib/ip-lookup';
+import { sendVisitorNotifications } from '@/lib/notifications';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -84,6 +85,24 @@ export async function POST(request: NextRequest) {
 
       if (error) throw error;
       visitor = newVisitor;
+
+      // Send notifications for new visitors
+      if (workspaceId) {
+        await sendVisitorNotifications(workspaceId, {
+          visitorId: newVisitor.id,
+          name: newVisitor.name,
+          email: newVisitor.email,
+          company: newVisitor.company || ipInfo?.company,
+          city: ipInfo?.city,
+          country: ipInfo?.country,
+          deviceType: device_type,
+          currentPage: url,
+          landingPage: url,
+          utmSource: utm_source,
+          utmCampaign: utm_campaign,
+          isReturning: false,
+        });
+      }
     } else {
       // Update existing visitor
       await supabase
