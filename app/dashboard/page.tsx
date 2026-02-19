@@ -115,6 +115,8 @@ export default function Dashboard() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Visitor</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Device</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Page Views</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Seen</th>
                 </tr>
@@ -126,10 +128,32 @@ export default function Dashboard() {
                       <div>
                         <div className="font-medium text-gray-900">{visitor.name || 'Anonymous'}</div>
                         <div className="text-sm text-gray-500">{visitor.email || visitor.ip_address}</div>
+                        {visitor.is_returning && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                            Returning
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">{visitor.company || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{visitor.city ? `${visitor.city}, ${visitor.country}` : '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {visitor.city && visitor.country ? `${visitor.city}, ${visitor.country}` : visitor.country || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {visitor.device_type ? (
+                        <span className="capitalize">{visitor.device_type}</span>
+                      ) : '-'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {visitor.utm_source || visitor.utm_medium ? (
+                        <div>
+                          <div>{visitor.utm_source || '-'}</div>
+                          {visitor.utm_campaign && (
+                            <div className="text-xs text-gray-500">{visitor.utm_campaign}</div>
+                          )}
+                        </div>
+                      ) : '-'}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-900">{visitor.page_views}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {formatDistanceToNow(new Date(visitor.last_seen), { addSuffix: true })}

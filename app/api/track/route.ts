@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { lookupIPWithFallback } from '@/lib/ip-lookup';
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -40,6 +41,9 @@ export async function POST(request: NextRequest) {
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
+    // Lookup IP geolocation
+    const ipInfo = await lookupIPWithFallback(ip);
+
     // Check if visitor exists
     let { data: visitor } = await supabase
       .from('visitors')
@@ -69,6 +73,11 @@ export async function POST(request: NextRequest) {
           utm_term,
           utm_content,
           landing_page: url,
+          // IP geolocation data
+          city: ipInfo?.city,
+          country: ipInfo?.country,
+          company: ipInfo?.company || company,
+          is_returning: false,
         })
         .select()
         .single();
