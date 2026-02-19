@@ -124,13 +124,13 @@ export default function Dashboard() {
                   <tr key={visitor.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div>
-                        <div className="font-medium">{visitor.name || 'Anonymous'}</div>
+                        <div className="font-medium text-gray-900">{visitor.name || 'Anonymous'}</div>
                         <div className="text-sm text-gray-500">{visitor.email || visitor.ip_address}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm">{visitor.company || '-'}</td>
-                    <td className="px-6 py-4 text-sm">{visitor.city ? `${visitor.city}, ${visitor.country}` : '-'}</td>
-                    <td className="px-6 py-4 text-sm">{visitor.page_views}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{visitor.company || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{visitor.city ? `${visitor.city}, ${visitor.country}` : '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{visitor.page_views}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {formatDistanceToNow(new Date(visitor.last_seen), { addSuffix: true })}
                     </td>
@@ -153,7 +153,7 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
           {icon}
         </div>
         <div>
-          <div className="text-2xl font-bold">{value}</div>
+          <div className="text-2xl font-bold text-gray-900">{value}</div>
           <div className="text-sm text-gray-600">{label}</div>
         </div>
       </div>

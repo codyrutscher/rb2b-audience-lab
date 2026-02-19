@@ -16,7 +16,25 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseClient();
   try {
     const body = await request.json();
-    const { sessionId, workspaceId, url, title, referrer } = body;
+    const { 
+      sessionId, 
+      workspaceId, 
+      url, 
+      title, 
+      referrer,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      utm_term,
+      utm_content,
+      screen_width,
+      screen_height,
+      viewport_width,
+      viewport_height,
+      language,
+      timezone,
+      device_type,
+    } = body;
 
     // Get IP and user agent
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
@@ -40,6 +58,17 @@ export async function POST(request: NextRequest) {
           user_agent: userAgent,
           page_views: 1,
           identified: false,
+          device_type,
+          screen_width,
+          screen_height,
+          language,
+          timezone,
+          utm_source,
+          utm_medium,
+          utm_campaign,
+          utm_term,
+          utm_content,
+          landing_page: url,
         })
         .select()
         .single();

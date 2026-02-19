@@ -17,6 +17,32 @@
     return sessionId;
   }
 
+  // Parse UTM parameters
+  function getUTMParams() {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      utm_source: params.get('utm_source'),
+      utm_medium: params.get('utm_medium'),
+      utm_campaign: params.get('utm_campaign'),
+      utm_term: params.get('utm_term'),
+      utm_content: params.get('utm_content'),
+    };
+  }
+
+  // Get device info
+  function getDeviceInfo() {
+    const ua = navigator.userAgent;
+    return {
+      screen_width: window.screen.width,
+      screen_height: window.screen.height,
+      viewport_width: window.innerWidth,
+      viewport_height: window.innerHeight,
+      language: navigator.language,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      device_type: /Mobile|Android|iPhone|iPad|iPod/.test(ua) ? 'mobile' : 'desktop',
+    };
+  }
+
   // Track page view
   function trackPageView() {
     const data = {
@@ -25,6 +51,8 @@
       url: window.location.href,
       title: document.title,
       referrer: document.referrer || null,
+      ...getUTMParams(),
+      ...getDeviceInfo(),
     };
 
     fetch('/api/track', {
@@ -50,6 +78,23 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     }).catch(err => console.error('Identification error:', err));
+  };
+
+  // Track custom events
+  window.audienceLabTrack = function(eventName, properties) {
+    const data = {
+      sessionId: getSessionId(),
+      workspaceId: workspaceId,
+      event: eventName,
+      properties: properties || {},
+      url: window.location.href,
+    };
+
+    fetch('/api/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).catch(err => console.error('Event tracking error:', err));
   };
 
   // Track initial page view
