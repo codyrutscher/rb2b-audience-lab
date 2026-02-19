@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
           // IP geolocation data
           city: ipInfo?.city,
           country: ipInfo?.country,
-          company: ipInfo?.company || company,
+          company: ipInfo?.company,
           is_returning: false,
         })
         .select()
