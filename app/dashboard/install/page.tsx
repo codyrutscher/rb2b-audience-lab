@@ -58,7 +58,7 @@ export default function InstallPage() {
           <div className="flex justify-between h-16 items-center">
             <Link href="/" className="flex items-center gap-2">
               <Eye className="w-6 h-6 text-purple-600" />
-              <span className="text-xl font-bold">Audience Lab</span>
+              <span className="text-xl font-bold text-gray-900">Audience Lab</span>
             </Link>
             <div className="flex gap-4">
               <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
@@ -74,7 +74,7 @@ export default function InstallPage() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Install Tracking Script</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Install Tracking Script</h1>
           <p className="text-gray-600">
             Add this script to your website to start tracking visitors
           </p>
@@ -87,7 +87,7 @@ export default function InstallPage() {
               <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">
                 1
               </div>
-              <h2 className="text-xl font-semibold">Add Tracking Script</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Add Tracking Script</h2>
             </div>
             <p className="text-gray-600 ml-11">
               Copy and paste this code into the <code className="bg-gray-100 px-2 py-1 rounded">&lt;head&gt;</code> section of your website
@@ -119,7 +119,7 @@ export default function InstallPage() {
               <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">
                 2
               </div>
-              <h2 className="text-xl font-semibold">Identify Visitors (Optional)</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Identify Visitors (Optional)</h2>
             </div>
             <p className="text-gray-600 ml-11">
               When you capture user information (form submission, login, etc.), call this function
@@ -147,7 +147,7 @@ export default function InstallPage() {
               <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">
                 3
               </div>
-              <h2 className="text-xl font-semibold">Verify Installation</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Verify Installation</h2>
             </div>
             <p className="text-gray-600 ml-11">
               Visit your website and check the dashboard to see if visitors are being tracked

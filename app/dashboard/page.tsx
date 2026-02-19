@@ -61,7 +61,7 @@ export default function Dashboard() {
           <div className="flex justify-between h-16 items-center">
             <Link href="/" className="flex items-center gap-2">
               <Eye className="w-6 h-6 text-purple-600" />
-              <span className="text-xl font-bold">Audience Lab</span>
+              <span className="text-xl font-bold text-gray-900">Audience Lab</span>
             </Link>
             <div className="flex gap-4">
               <Link href="/dashboard" className="text-purple-600 font-medium">
@@ -79,7 +79,7 @@ export default function Dashboard() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold mb-8">Visitor Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Visitor Dashboard</h1>
 
         {stats.total === 0 && (
           <div className="mb-8 p-6 bg-purple-50 border border-purple-200 rounded-lg">
@@ -106,7 +106,7 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b">
-            <h2 className="text-xl font-semibold">Recent Visitors</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Recent Visitors</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
