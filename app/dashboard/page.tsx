@@ -108,13 +108,13 @@ export default function Dashboard() {
 
   function getLeadScoreBadge(score: number) {
     if (score >= 70) {
-      return <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">🔥 Hot</span>;
+      return <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30">🔥 Hot</span>;
     } else if (score >= 40) {
-      return <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">⚡ Warm</span>;
+      return <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-orange-500/20 text-orange-400 border border-orange-500/30">⚡ Warm</span>;
     } else if (score >= 20) {
-      return <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">💡 Interested</span>;
+      return <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">💡 Interested</span>;
     }
-    return <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">❄️ Cold</span>;
+    return <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/30">❄️ Cold</span>;
   }
 
   async function exportToCSV() {
@@ -162,33 +162,36 @@ export default function Dashboard() {
     <div className="p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Visitor Dashboard</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">Visitor Dashboard</h1>
+            <p className="text-gray-400">Track and analyze your website visitors in real-time</p>
+          </div>
           <div className="flex flex-col items-end gap-2">
             <button
               onClick={exportToCSV}
               disabled={exporting}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg transition"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 disabled:bg-gray-700 text-white rounded-lg transition-all font-medium"
             >
               <Download className="w-4 h-4" />
               {exporting ? 'Exporting...' : 'Export CSV'}
             </button>
             {exportError && (
-              <div className="text-sm text-red-600">{exportError}</div>
+              <div className="text-sm text-red-400">{exportError}</div>
             )}
           </div>
         </div>
 
         {stats.total === 0 && (
-          <div className="mb-8 p-6 bg-purple-50 border border-purple-200 rounded-lg">
-            <h3 className="text-lg font-semibold text-purple-900 mb-2">
+          <div className="mb-8 p-6 glass neon-border rounded-xl">
+            <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
               🚀 Get Started: Install Tracking Script
             </h3>
-            <p className="text-purple-800 mb-4">
+            <p className="text-gray-400 mb-4">
               You haven&apos;t tracked any visitors yet. Install the tracking script on your website to start identifying visitors.
             </p>
             <Link
               href="/dashboard/install"
-              className="inline-block px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition"
+              className="inline-block px-6 py-2 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 text-white rounded-lg font-semibold transition-all"
             >
               View Installation Instructions
             </Link>
@@ -202,24 +205,24 @@ export default function Dashboard() {
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
+        <div className="glass neon-border rounded-xl p-4 mb-6">
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
                   type="text"
                   placeholder="Search visitors..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg text-gray-900"
+                  className="w-full pl-10 pr-4 py-2 bg-dark-tertiary border border-dark-border rounded-lg text-white placeholder-gray-500 focus:border-accent-primary focus:outline-none transition"
                 />
               </div>
             </div>
             <select
               value={filterIdentified}
               onChange={(e) => setFilterIdentified(e.target.value as any)}
-              className="px-4 py-2 border rounded-lg text-gray-900"
+              className="px-4 py-2 bg-dark-tertiary border border-dark-border rounded-lg text-white focus:border-accent-primary focus:outline-none transition"
             >
               <option value="all">All Visitors</option>
               <option value="identified">Identified Only</option>
@@ -228,7 +231,7 @@ export default function Dashboard() {
             <select
               value={filterDevice}
               onChange={(e) => setFilterDevice(e.target.value as any)}
-              className="px-4 py-2 border rounded-lg text-gray-900"
+              className="px-4 py-2 bg-dark-tertiary border border-dark-border rounded-lg text-white focus:border-accent-primary focus:outline-none transition"
             >
               <option value="all">All Devices</option>
               <option value="mobile">Mobile</option>
@@ -237,50 +240,50 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">Recent Visitors</h2>
+        <div className="glass neon-border rounded-xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-dark-border bg-dark-tertiary/50">
+            <h2 className="text-xl font-semibold text-white">Recent Visitors</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-dark-tertiary/30">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Visitor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Device</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Page Views</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Seen</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Visitor</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Company</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Location</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Device</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Source</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Page Views</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Last Seen</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-dark-border">
                 {filteredVisitors.map((visitor) => (
-                  <tr key={visitor.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/dashboard/visitors/${visitor.id}`}>
+                  <tr key={visitor.id} className="hover:bg-dark-tertiary/30 cursor-pointer transition" onClick={() => window.location.href = `/dashboard/visitors/${visitor.id}`}>
                     <td className="px-6 py-4">
                       <div>
                         <div className="flex items-center gap-2">
-                          <div className="font-medium text-gray-900">{visitor.name || 'Anonymous'}</div>
+                          <div className="font-medium text-white">{visitor.name || 'Anonymous'}</div>
                           {getLeadScoreBadge(calculateLeadScore(visitor))}
                         </div>
-                        <div className="text-sm text-gray-500">{visitor.email || visitor.ip_address}</div>
+                        <div className="text-sm text-gray-400">{visitor.email || visitor.ip_address}</div>
                         {visitor.is_returning && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
                             Returning
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{visitor.company || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-6 py-4 text-sm text-gray-300">{visitor.company || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-300">
                       {visitor.city && visitor.country ? `${visitor.city}, ${visitor.country}` : visitor.country || '-'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-6 py-4 text-sm text-gray-300">
                       {visitor.device_type ? (
                         <span className="capitalize">{visitor.device_type}</span>
                       ) : '-'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-6 py-4 text-sm text-gray-300">
                       {visitor.utm_source || visitor.utm_medium ? (
                         <div>
                           <div>{visitor.utm_source || '-'}</div>
@@ -290,8 +293,8 @@ export default function Dashboard() {
                         </div>
                       ) : '-'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{visitor.page_views}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
+                    <td className="px-6 py-4 text-sm text-white font-medium">{visitor.page_views}</td>
+                    <td className="px-6 py-4 text-sm text-gray-400">
                       {formatDistanceToNow(new Date(visitor.last_seen), { addSuffix: true })}
                     </td>
                   </tr>
@@ -307,14 +310,14 @@ export default function Dashboard() {
 
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="glass neon-border rounded-xl p-6 hover:shadow-lg hover:shadow-accent-primary/10 transition-all group">
       <div className="flex items-center gap-4">
-        <div className="p-3 bg-purple-100 rounded-lg text-purple-600">
+        <div className="p-3 bg-gradient-purple rounded-lg text-white shadow-lg shadow-accent-primary/20 group-hover:scale-110 transition-transform">
           {icon}
         </div>
         <div>
-          <div className="text-2xl font-bold text-gray-900">{value}</div>
-          <div className="text-sm text-gray-600">{label}</div>
+          <div className="text-3xl font-bold text-white">{value}</div>
+          <div className="text-sm text-gray-400">{label}</div>
         </div>
       </div>
     </div>

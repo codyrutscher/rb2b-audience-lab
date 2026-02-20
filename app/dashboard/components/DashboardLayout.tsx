@@ -13,7 +13,8 @@ import {
   Key, 
   Settings, 
   Code,
-  LogOut 
+  LogOut,
+  Sparkles
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useState } from "react";
@@ -48,19 +49,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-dark-bg flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r flex flex-col">
+      <aside className="w-64 bg-dark-secondary border-r border-dark-border flex flex-col relative overflow-hidden">
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-accent-primary/5 via-transparent to-transparent pointer-events-none" />
+        
         {/* Logo */}
-        <div className="h-16 flex items-center gap-2 px-6 border-b">
-          <Link href="/" className="flex items-center gap-2">
-            <Eye className="w-6 h-6 text-purple-600" />
-            <span className="text-xl font-bold text-gray-900">Audience Lab</span>
+        <div className="h-16 flex items-center gap-2 px-6 border-b border-dark-border relative z-10">
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="relative">
+              <Eye className="w-6 h-6 text-accent-primary" />
+              <Sparkles className="w-3 h-3 text-accent-secondary absolute -top-1 -right-1 animate-pulse-slow" />
+            </div>
+            <span className="text-xl font-bold gradient-text">Audience Lab</span>
           </Link>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto relative z-10">
           {navItems.map((item) => {
             const isActive = pathname === item.href || 
                            (item.href !== '/dashboard' && pathname?.startsWith(item.href));
@@ -69,34 +76,39 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group ${
                   isActive
-                    ? 'bg-purple-50 text-purple-700 font-medium'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    ? 'bg-gradient-purple text-white shadow-lg shadow-accent-primary/20'
+                    : 'text-gray-400 hover:text-white hover:bg-dark-tertiary'
                 }`}
               >
-                {item.icon}
-                <span>{item.label}</span>
+                <span className={isActive ? '' : 'group-hover:scale-110 transition-transform'}>
+                  {item.icon}
+                </span>
+                <span className="font-medium">{item.label}</span>
+                {isActive && (
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                )}
               </Link>
             );
           })}
         </nav>
 
         {/* Logout Button */}
-        <div className="p-3 border-t">
+        <div className="p-3 border-t border-dark-border relative z-10">
           <button
             onClick={handleLogout}
             disabled={loggingOut}
-            className="w-full flex items-center gap-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition disabled:opacity-50"
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-gray-400 hover:text-white hover:bg-dark-tertiary rounded-lg transition-all disabled:opacity-50 group"
           >
-            <LogOut className="w-5 h-5" />
-            <span>{loggingOut ? 'Logging out...' : 'Logout'}</span>
+            <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            <span className="font-medium">{loggingOut ? 'Logging out...' : 'Logout'}</span>
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto bg-dark-bg">
         {children}
       </main>
     </div>
