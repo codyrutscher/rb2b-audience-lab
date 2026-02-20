@@ -92,6 +92,28 @@ export default function Dashboard() {
     setFilteredVisitors(filtered);
   }
 
+  function calculateLeadScore(visitor: Visitor): number {
+    let score = 0;
+    if (visitor.identified) score += 20;
+    if (visitor.company) score += 15;
+    score += Math.min((visitor.page_views || 0) * 2, 30);
+    if (visitor.is_returning) score += 10;
+    if (visitor.linkedin_url) score += 10;
+    if (visitor.utm_campaign) score += 15;
+    return score;
+  }
+
+  function getLeadScoreBadge(score: number) {
+    if (score >= 70) {
+      return <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">🔥 Hot</span>;
+    } else if (score >= 40) {
+      return <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">⚡ Warm</span>;
+    } else if (score >= 20) {
+      return <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">💡 Interested</span>;
+    }
+    return <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">❄️ Cold</span>;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <nav className="bg-white border-b">
@@ -203,7 +225,10 @@ export default function Dashboard() {
                   <tr key={visitor.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => window.location.href = `/dashboard/visitors/${visitor.id}`}>
                     <td className="px-6 py-4">
                       <div>
-                        <div className="font-medium text-gray-900">{visitor.name || 'Anonymous'}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium text-gray-900">{visitor.name || 'Anonymous'}</div>
+                          {getLeadScoreBadge(calculateLeadScore(visitor))}
+                        </div>
                         <div className="text-sm text-gray-500">{visitor.email || visitor.ip_address}</div>
                         {visitor.is_returning && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
