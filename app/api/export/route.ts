@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       
       // CSV Rows
       data.forEach(v => {
-        csvContent += `"${v.name || ''}","${v.email || ''}","${v.company || ''}","${v.city || ''}","${v.country || ''}","${v.device_type || ''}",${v.page_views},"${v.first_seen}","${v.last_seen}",${v.identified},"${v.utm_source || ''}","${v.utm_campaign || '"}"\n`;
+        csvContent += `"${v.name || ''}","${v.email || ''}","${v.company || ''}","${v.city || ''}","${v.country || ''}","${v.device_type || ''}",${v.page_views},"${v.first_seen}","${v.last_seen}",${v.identified},"${v.utm_source || ''}","${v.utm_campaign || ''}"\n`;
       });
     } else if (type === 'page_views') {
       const { data: pageViews } = await supabase
