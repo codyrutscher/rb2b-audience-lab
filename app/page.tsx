@@ -1,27 +1,71 @@
+"use client";
+
 import Link from "next/link";
-import { Eye, Users, Zap, BarChart3, Slack, Globe, MousePointer, Clock, TrendingUp, Shield, Webhook, Mail, Filter, Bell, Target, Activity, MapPin, Monitor, Smartphone } from "lucide-react";
+import { Eye, Sparkles, ArrowRight, Zap, Target, TrendingUp, Shield, Users, BarChart3, Bell, Globe, Code, CheckCircle2, Star } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export default function Home() {
-  console.log('=== HOME PAGE RENDERING ===');
-  console.log('Environment:', process.env.NODE_ENV);
-  console.log('Timestamp:', new Date().toISOString());
-  
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [visitorCount, setVisitorCount] = useState(0);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    
+    // Animated counter
+    const interval = setInterval(() => {
+      setVisitorCount(prev => (prev < 2847 ? prev + 47 : 2847));
+    }, 50);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-dark-bg text-white overflow-hidden relative">
+      {/* Animated Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-accent-primary/10 via-transparent to-accent-secondary/10" />
+        <div 
+          className="absolute w-96 h-96 bg-accent-primary/20 rounded-full blur-3xl"
+          style={{
+            left: `${mousePosition.x - 192}px`,
+            top: `${mousePosition.y - 192}px`,
+            transition: 'all 0.3s ease-out',
+          }}
+        />
+        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-accent-secondary/10 rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-accent-primary/10 rounded-full blur-3xl animate-pulse-slow" />
+      </div>
+
       {/* Navigation */}
-      <nav className="border-b border-white/10 bg-black/20 backdrop-blur-sm fixed w-full z-50">
+      <nav className="relative z-50 border-b border-dark-border glass">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center gap-2">
-              <Eye className="w-8 h-8 text-purple-400" />
-              <span className="text-2xl font-bold text-white">Audience Lab</span>
-            </div>
+          <div className="flex justify-between h-20 items-center">
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="relative">
+                <Eye className="w-8 h-8 text-accent-primary group-hover:scale-110 transition-transform" />
+                <Sparkles className="w-4 h-4 text-accent-secondary absolute -top-1 -right-1 animate-pulse-slow" />
+              </div>
+              <span className="text-2xl font-bold gradient-text">Audience Lab</span>
+            </Link>
             <div className="flex gap-4">
-              <Link href="/login" className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition backdrop-blur-sm border border-white/20">
+              <Link 
+                href="/login" 
+                className="px-6 py-2.5 glass-hover rounded-lg transition-all font-medium text-gray-300 hover:text-white border border-dark-border"
+              >
                 Login
               </Link>
-              <Link href="/signup" className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
-                Sign Up
+              <Link 
+                href="/signup" 
+                className="px-6 py-2.5 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 rounded-lg transition-all font-medium flex items-center gap-2 group"
+              >
+                Get Started
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
           </div>
@@ -29,347 +73,233 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/20 rounded-full border border-purple-500/30 mb-8">
-            <Zap className="w-4 h-4 text-purple-400" />
-            <span className="text-purple-200 text-sm">Real-time B2B visitor intelligence</span>
-          </div>
-          
-          <h1 className="text-6xl md:text-8xl font-bold text-white mb-6 leading-tight">
-            Know Who&apos;s<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-              On Your Site
-            </span>
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-purple-200 mb-12 max-w-3xl mx-auto">
-            Identify anonymous B2B visitors, get their contact info, and turn website traffic into qualified pipeline. 
-            Like RB2B, but better.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <Link
-              href="/signup"
-              className="px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-lg transition shadow-lg shadow-purple-500/50"
-            >
-              Start Free Trial
-            </Link>
-            <Link
-              href="/docs"
-              className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold text-lg transition backdrop-blur-sm border border-white/20"
-            >
-              View Demo
-            </Link>
+      <section className="relative z-10 pt-32 pb-20 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 glass neon-border rounded-full mb-8 animate-pulse-slow">
+              <Zap className="w-4 h-4 text-accent-primary" />
+              <span className="text-sm font-medium text-gray-300">
+                <span className="text-accent-primary font-bold">{visitorCount.toLocaleString()}</span> visitors identified today
+              </span>
+            </div>
+
+            {/* Main Headline */}
+            <h1 className="text-6xl md:text-8xl font-black mb-8 leading-tight">
+              <span className="text-white">Turn Anonymous</span>
+              <br />
+              <span className="gradient-text">Visitors Into Leads</span>
+            </h1>
+
+            {/* Subheadline */}
+            <p className="text-xl md:text-2xl text-gray-400 mb-12 max-w-3xl mx-auto leading-relaxed">
+              Identify who&apos;s browsing your site, get their contact info, and close deals faster. 
+              <span className="text-white font-semibold"> No forms required.</span>
+            </p>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+              <Link 
+                href="/signup" 
+                className="px-8 py-4 bg-gradient-purple hover:shadow-2xl hover:shadow-accent-primary/40 rounded-xl transition-all font-bold text-lg flex items-center gap-3 group"
+              >
+                Start Free Trial
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+              </Link>
+              <Link 
+                href="/dashboard/install" 
+                className="px-8 py-4 glass-hover neon-border rounded-xl transition-all font-bold text-lg flex items-center gap-3"
+              >
+                <Code className="w-5 h-5" />
+                View Demo
+              </Link>
+            </div>
+
+            {/* Social Proof */}
+            <div className="flex items-center justify-center gap-8 text-sm text-gray-400">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-green-400" />
+                <span>No credit card required</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-green-400" />
+                <span>5-minute setup</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-green-400" />
+                <span>Cancel anytime</span>
+              </div>
+            </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
-            <div>
-              <div className="text-4xl font-bold text-white mb-2">95%</div>
-              <div className="text-purple-300 text-sm">Visitor Identification</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-white mb-2">&lt;100ms</div>
-              <div className="text-purple-300 text-sm">Real-time Tracking</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-white mb-2">24/7</div>
-              <div className="text-purple-300 text-sm">Instant Alerts</div>
+          {/* Hero Image/Dashboard Preview */}
+          <div className="relative max-w-6xl mx-auto">
+            <div className="glass neon-border rounded-2xl p-2 glow">
+              <div className="bg-dark-tertiary rounded-xl overflow-hidden">
+                <div className="h-12 bg-dark-secondary border-b border-dark-border flex items-center px-4 gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500/50" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
+                  <div className="w-3 h-3 rounded-full bg-green-500/50" />
+                </div>
+                <div className="p-8 space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center gap-4 glass rounded-lg p-4">
+                      <div className="w-12 h-12 rounded-full bg-gradient-purple" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-700 rounded w-1/3" />
+                        <div className="h-3 bg-gray-800 rounded w-1/2" />
+                      </div>
+                      <div className="px-3 py-1 bg-accent-primary/20 text-accent-primary rounded-full text-xs font-bold border border-accent-primary/30">
+                        🔥 Hot Lead
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* What We Track Section */}
-      <section className="py-20 px-4 bg-black/30">
+      {/* Stats Section */}
+      <section className="relative z-10 py-20 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Everything About Your Visitors
-            </h2>
-            <p className="text-xl text-purple-200">
-              Our pixel tracks 50+ data points automatically
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <TrackingCard
-              icon={<Users className="w-8 h-8" />}
-              title="Identity"
-              items={["Name & Email", "Company", "Job Title", "LinkedIn Profile"]}
-            />
-            <TrackingCard
-              icon={<MapPin className="w-8 h-8" />}
-              title="Location"
-              items={["City & Country", "IP Address", "Timezone", "ISP Detection"]}
-            />
-            <TrackingCard
-              icon={<Monitor className="w-8 h-8" />}
-              title="Device"
-              items={["Desktop/Mobile", "Screen Size", "Browser", "Operating System"]}
-            />
-            <TrackingCard
-              icon={<Activity className="w-8 h-8" />}
-              title="Behavior"
-              items={["Page Views", "Time on Site", "Scroll Depth", "Click Tracking"]}
-            />
-            <TrackingCard
-              icon={<Target className="w-8 h-8" />}
-              title="Marketing"
-              items={["UTM Parameters", "Traffic Source", "Campaign", "Landing Page"]}
-            />
-            <TrackingCard
-              icon={<MousePointer className="w-8 h-8" />}
-              title="Engagement"
-              items={["Form Interactions", "Button Clicks", "Exit Intent", "Session Recording"]}
-            />
-            <TrackingCard
-              icon={<Clock className="w-8 h-8" />}
-              title="Sessions"
-              items={["Session Duration", "Return Visits", "Bounce Rate", "Page Sequence"]}
-            />
-            <TrackingCard
-              icon={<TrendingUp className="w-8 h-8" />}
-              title="Intent Signals"
-              items={["Pricing Views", "Demo Requests", "High-Value Pages", "Lead Scoring"]}
-            />
+          <div className="grid md:grid-cols-4 gap-8">
+            {[
+              { icon: <Users />, value: "95%", label: "Identification Rate" },
+              { icon: <Zap />, value: "<100ms", label: "Tracking Speed" },
+              { icon: <Target />, value: "50+", label: "Data Points" },
+              { icon: <TrendingUp />, value: "3x", label: "More Leads" },
+            ].map((stat, i) => (
+              <div key={i} className="glass neon-border rounded-xl p-6 text-center hover:shadow-lg hover:shadow-accent-primary/20 transition-all group">
+                <div className="inline-flex p-4 bg-gradient-purple rounded-xl mb-4 group-hover:scale-110 transition-transform">
+                  {stat.icon}
+                </div>
+                <div className="text-4xl font-black gradient-text mb-2">{stat.value}</div>
+                <div className="text-gray-400">{stat.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Features Grid */}
-      <section className="py-20 px-4">
+      <section className="relative z-10 py-20 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              Powerful Features
+            <h2 className="text-5xl font-black text-white mb-4">
+              Everything You Need to
+              <span className="gradient-text"> Convert Visitors</span>
             </h2>
-            <p className="text-xl text-purple-200">
-              Everything you need to convert visitors into customers
+            <p className="text-xl text-gray-400">
+              Powerful features that turn anonymous traffic into qualified leads
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <FeatureCard
-              icon={<Slack className="w-12 h-12 text-purple-400" />}
-              title="Slack Notifications"
-              description="Get instant alerts when high-value visitors land on your site. See their name, company, and what they're viewing in real-time."
-            />
-            <FeatureCard
-              icon={<Users className="w-12 h-12 text-purple-400" />}
-              title="Person-Level ID"
-              description="Identify individual visitors, not just companies. Get names, emails, job titles, and LinkedIn profiles automatically."
-            />
-            <FeatureCard
-              icon={<Globe className="w-12 h-12 text-purple-400" />}
-              title="Company Enrichment"
-              description="Automatically identify companies from IP addresses. Get company size, industry, revenue, and tech stack."
-            />
-            <FeatureCard
-              icon={<Filter className="w-12 h-12 text-purple-400" />}
-              title="Advanced Filtering"
-              description="Filter visitors by company, location, source, device, and more. Save custom segments for quick access."
-            />
-            <FeatureCard
-              icon={<BarChart3 className="w-12 h-12 text-purple-400" />}
-              title="Analytics Dashboard"
-              description="Beautiful, real-time dashboard showing visitor activity, traffic sources, and conversion funnels."
-            />
-            <FeatureCard
-              icon={<Bell className="w-12 h-12 text-purple-400" />}
-              title="Smart Alerts"
-              description="Set up custom alerts based on visitor behavior, company size, or engagement level. Never miss a hot lead."
-            />
-            <FeatureCard
-              icon={<Webhook className="w-12 h-12 text-purple-400" />}
-              title="Webhooks & API"
-              description="Send visitor data anywhere with webhooks. Full REST API for custom integrations and automation."
-            />
-            <FeatureCard
-              icon={<Mail className="w-12 h-12 text-purple-400" />}
-              title="CRM Integration"
-              description="Sync leads directly to HubSpot, Salesforce, or any CRM. Automatic contact creation and enrichment."
-            />
-            <FeatureCard
-              icon={<Shield className="w-12 h-12 text-purple-400" />}
-              title="Privacy First"
-              description="GDPR & CCPA compliant. Respect Do Not Track. Full data control and automatic deletion options."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-20 px-4 bg-black/30">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              How It Works
-            </h2>
-            <p className="text-xl text-purple-200">
-              Get started in 3 simple steps
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-12">
-            <StepCard
-              number="1"
-              title="Install Pixel"
-              description="Add one line of code to your website. Takes less than 60 seconds. No developer needed."
-            />
-            <StepCard
-              number="2"
-              title="Connect Integrations"
-              description="Link your Slack, CRM, or webhook. Get notified instantly when visitors arrive."
-            />
-            <StepCard
-              number="3"
-              title="Convert Visitors"
-              description="See who's on your site in real-time. Reach out while they're hot and close more deals."
-            />
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: <Eye />,
+                title: "Real-Time Identification",
+                description: "Instantly identify companies and contacts visiting your site"
+              },
+              {
+                icon: <BarChart3 />,
+                title: "Advanced Analytics",
+                description: "Track behavior, engagement, and conversion patterns"
+              },
+              {
+                icon: <Bell />,
+                title: "Smart Alerts",
+                description: "Get notified when high-value prospects visit"
+              },
+              {
+                icon: <Globe />,
+                title: "IP Intelligence",
+                description: "Enrich visitor data with company and location info"
+              },
+              {
+                icon: <Target />,
+                title: "Lead Scoring",
+                description: "Automatically prioritize your hottest leads"
+              },
+              {
+                icon: <Shield />,
+                title: "Privacy First",
+                description: "GDPR compliant with enterprise-grade security"
+              },
+            ].map((feature, i) => (
+              <div key={i} className="glass neon-border rounded-xl p-6 hover:shadow-lg hover:shadow-accent-primary/20 transition-all group">
+                <div className="inline-flex p-3 bg-gradient-purple rounded-lg mb-4 group-hover:scale-110 transition-transform">
+                  {feature.icon}
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">{feature.title}</h3>
+                <p className="text-gray-400">{feature.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Social Proof */}
-      <section className="py-20 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-12">
-            Trusted by Growing Teams
-          </h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <TestimonialCard
-              quote="Audience Lab helped us identify 10x more leads than Google Analytics. Game changer."
-              author="Sarah Chen"
-              role="Head of Growth"
-            />
-            <TestimonialCard
-              quote="The Slack notifications are incredible. We close deals faster because we know who's interested."
-              author="Mike Rodriguez"
-              role="Sales Director"
-            />
-            <TestimonialCard
-              quote="Finally, a visitor tracking tool that actually identifies people, not just companies."
-              author="Emily Watson"
-              role="Marketing Manager"
-            />
+      <section className="relative z-10 py-20 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="glass neon-border rounded-2xl p-12 text-center">
+            <div className="flex justify-center gap-1 mb-6">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Star key={i} className="w-8 h-8 fill-yellow-400 text-yellow-400" />
+              ))}
+            </div>
+            <blockquote className="text-2xl md:text-3xl font-medium text-white mb-6">
+              &quot;Audience Lab helped us identify 10x more leads than our old solution. 
+              The real-time alerts are a game changer.&quot;
+            </blockquote>
+            <div className="text-gray-400">
+              <div className="font-semibold text-white">Sarah Chen</div>
+              <div>Head of Growth, TechCorp</div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 px-4">
+      {/* Final CTA */}
+      <section className="relative z-10 py-32 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-5xl md:text-6xl font-bold text-white mb-6">
-            Ready to Know Your Visitors?
+          <h2 className="text-5xl md:text-6xl font-black text-white mb-6">
+            Ready to <span className="gradient-text">10x Your Leads?</span>
           </h2>
-          <p className="text-xl text-purple-200 mb-12">
-            Start your free trial today. No credit card required.
+          <p className="text-xl text-gray-400 mb-12">
+            Join hundreds of companies using Audience Lab to convert anonymous visitors into customers
           </p>
-          <Link
-            href="/signup"
-            className="inline-block px-12 py-5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-xl transition shadow-2xl shadow-purple-500/50"
+          <Link 
+            href="/signup" 
+            className="inline-flex items-center gap-3 px-12 py-5 bg-gradient-purple hover:shadow-2xl hover:shadow-accent-primary/50 rounded-xl transition-all font-bold text-xl group"
           >
-            Get Started Free
+            Start Your Free Trial
+            <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
           </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-12 px-4">
+      <footer className="relative z-10 border-t border-dark-border glass py-12 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Eye className="w-6 h-6 text-purple-400" />
-                <span className="text-xl font-bold text-white">Audience Lab</span>
-              </div>
-              <p className="text-purple-300 text-sm">
-                B2B visitor intelligence platform
-              </p>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Eye className="w-6 h-6 text-accent-primary" />
+              <span className="text-lg font-bold gradient-text">Audience Lab</span>
             </div>
-            <div>
-              <h3 className="text-white font-semibold mb-4">Product</h3>
-              <ul className="space-y-2 text-purple-300 text-sm">
-                <li><Link href="/docs" className="hover:text-white">Documentation</Link></li>
-                <li><Link href="/dashboard" className="hover:text-white">Dashboard</Link></li>
-                <li><Link href="/dashboard/install" className="hover:text-white">Installation</Link></li>
-              </ul>
+            <div className="text-gray-400 text-sm">
+              © 2026 Audience Lab. All rights reserved.
             </div>
-            <div>
-              <h3 className="text-white font-semibold mb-4">Company</h3>
-              <ul className="space-y-2 text-purple-300 text-sm">
-                <li><Link href="#" className="hover:text-white">About</Link></li>
-                <li><Link href="#" className="hover:text-white">Blog</Link></li>
-                <li><Link href="#" className="hover:text-white">Careers</Link></li>
-              </ul>
+            <div className="flex gap-6 text-sm text-gray-400">
+              <Link href="/docs" className="hover:text-white transition">Docs</Link>
+              <Link href="/login" className="hover:text-white transition">Login</Link>
+              <Link href="/signup" className="hover:text-white transition">Sign Up</Link>
             </div>
-            <div>
-              <h3 className="text-white font-semibold mb-4">Legal</h3>
-              <ul className="space-y-2 text-purple-300 text-sm">
-                <li><Link href="#" className="hover:text-white">Privacy</Link></li>
-                <li><Link href="#" className="hover:text-white">Terms</Link></li>
-                <li><Link href="#" className="hover:text-white">Security</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-white/10 pt-8 text-center text-purple-300 text-sm">
-            © 2026 Audience Lab. All rights reserved.
           </div>
         </div>
       </footer>
-    </div>
-  );
-}
-
-function TrackingCard({ icon, title, items }: { icon: React.ReactNode; title: string; items: string[] }) {
-  return (
-    <div className="p-6 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition">
-      <div className="text-purple-400 mb-4">{icon}</div>
-      <h3 className="text-lg font-semibold text-white mb-3">{title}</h3>
-      <ul className="space-y-2">
-        {items.map((item, i) => (
-          <li key={i} className="text-sm text-purple-200 flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
-            {item}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
-  return (
-    <div className="p-6 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition">
-      <div className="mb-4">{icon}</div>
-      <h3 className="text-xl font-semibold text-white mb-2">{title}</h3>
-      <p className="text-purple-200">{description}</p>
-    </div>
-  );
-}
-
-function StepCard({ number, title, description }: { number: string; title: string; description: string }) {
-  return (
-    <div className="text-center">
-      <div className="w-16 h-16 rounded-full bg-purple-600 text-white text-2xl font-bold flex items-center justify-center mx-auto mb-6">
-        {number}
-      </div>
-      <h3 className="text-2xl font-semibold text-white mb-4">{title}</h3>
-      <p className="text-purple-200">{description}</p>
-    </div>
-  );
-}
-
-function TestimonialCard({ quote, author, role }: { quote: string; author: string; role: string }) {
-  return (
-    <div className="p-8 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10">
-      <p className="text-purple-100 mb-6 text-lg">&quot;{quote}&quot;</p>
-      <div>
-        <div className="font-semibold text-white">{author}</div>
-        <div className="text-sm text-purple-300">{role}</div>
-      </div>
     </div>
   );
 }
