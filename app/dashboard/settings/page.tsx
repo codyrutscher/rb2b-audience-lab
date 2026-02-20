@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Eye, Slack, Mail, Webhook, Save, Plus, Trash2 } from "lucide-react";
+import { Slack, Mail, Webhook, Save, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/supabase-auth";
 
@@ -108,30 +107,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <nav className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <Eye className="w-6 h-6 text-purple-600" />
-              <span className="text-xl font-bold text-gray-900">Audience Lab</span>
-            </Link>
-            <div className="flex gap-4">
-              <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
-                Dashboard
-              </Link>
-              <Link href="/dashboard/install" className="text-gray-600 hover:text-gray-900">
-                Install
-              </Link>
-              <Link href="/dashboard/settings" className="text-purple-600 font-medium">
-                Settings
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="p-8">
+      <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Integrations & Settings</h1>
 
         {/* Slack Integration */}
@@ -302,7 +279,7 @@ export default function SettingsPage() {
             <p className="text-sm text-gray-600">Email notifications will be available in the next update.</p>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

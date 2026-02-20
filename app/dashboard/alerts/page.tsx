@@ -1,0 +1,321 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Plus, Edit2, Trash2, Bell, AlertCircle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { getCurrentUser } from "@/lib/supabase-auth";
+
+type AlertRule = {
+  id: string;
+  name: string;
+  conditions: any;
+  actions: any;
+  enabled: boolean;
+  created_at: string;
+};
+
+export default function AlertsPage() {
+  const [alerts, setAlerts] = useState<AlertRule[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [editingAlert, setEditingAlert] = useState<AlertRule | null>(null);
+  const [name, setName] = useState("");
+  const [conditionType, setConditionType] = useState("visitor_identified");
+  const [conditionValue, setConditionValue] = useState("");
+  const [actionType, setActionType] = useState("slack");
+  const [saving, setSaving] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState<string>("");
+
+  useEffect(() => {
+    loadAlerts();
+  }, []);
+
+  async function loadAlerts() {
+    const user = await getCurrentUser();
+    if (user) {
+      setWorkspaceId(user.id);
+      
+      const { data } = await supabase
+        .from('alert_rules')
+        .select('*')
+        .eq('workspace_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (data) {
+        setAlerts(data);
+      }
+    }
+  }
+
+  async function saveAlert() {
+    if (!name.trim()) return;
+    
+    setSaving(true);
+    try {
+      const conditions = {
+        type: conditionType,
+        value: conditionValue,
+      };
+
+      const actions = {
+        type: actionType,
+      };
+
+      if (editingAlert) {
+        await supabase
+          .from('alert_rules')
+          .update({ name, conditions, actions })
+          .eq('id', editingAlert.id);
+      } else {
+        await supabase
+          .from('alert_rules')
+          .insert({
+            workspace_id: workspaceId,
+            name,
+            conditions,
+            actions,
+            enabled: true,
+          });
+      }
+
+      resetForm();
+      loadAlerts();
+    } catch (error) {
+      console.error('Error saving alert:', error);
+    }
+    setSaving(false);
+  }
+
+  async function toggleAlert(id: string, enabled: boolean) {
+    await supabase
+      .from('alert_rules')
+      .update({ enabled: !enabled })
+      .eq('id', id);
+    
+    loadAlerts();
+  }
+
+  async function deleteAlert(id: string) {
+    if (!confirm('Are you sure you want to delete this alert rule?')) return;
+    
+    await supabase
+      .from('alert_rules')
+      .delete()
+      .eq('id', id);
+    
+    loadAlerts();
+  }
+
+  function editAlert(alert: AlertRule) {
+    setEditingAlert(alert);
+    setName(alert.name);
+    setConditionType(alert.conditions?.type || "visitor_identified");
+    setConditionValue(alert.conditions?.value || "");
+    setActionType(alert.actions?.type || "slack");
+    setShowForm(true);
+  }
+
+  function resetForm() {
+    setShowForm(false);
+    setEditingAlert(null);
+    setName("");
+    setConditionType("visitor_identified");
+    setConditionValue("");
+    setActionType("slack");
+  }
+
+  return (
+    <div className="p-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Alert Rules</h1>
+            <p className="text-gray-600 mt-2">Get notified when specific conditions are met</p>
+          </div>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+          >
+            <Plus className="w-4 h-4" />
+            New Alert
+          </button>
+        </div>
+
+        {showForm && (
+          <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              {editingAlert ? 'Edit Alert Rule' : 'Create New Alert Rule'}
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Alert Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., High-Value Visitor Alert"
+                  className="w-full px-4 py-2 border rounded-lg text-gray-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  When this happens...
+                </label>
+                <select
+                  value={conditionType}
+                  onChange={(e) => setConditionType(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg text-gray-900"
+                >
+                  <option value="visitor_identified">Visitor is identified</option>
+                  <option value="visitor_arrived">New visitor arrives</option>
+                  <option value="page_views_threshold">Page views exceed threshold</option>
+                  <option value="company_match">Company matches</option>
+                  <option value="location_match">Location matches</option>
+                  <option value="utm_source_match">UTM source matches</option>
+                  <option value="lead_score_threshold">Lead score exceeds threshold</option>
+                </select>
+              </div>
+
+              {(conditionType === 'page_views_threshold' || conditionType === 'lead_score_threshold') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Threshold Value
+                  </label>
+                  <input
+                    type="number"
+                    value={conditionValue}
+                    onChange={(e) => setConditionValue(e.target.value)}
+                    placeholder="e.g., 5"
+                    className="w-full px-4 py-2 border rounded-lg text-gray-900"
+                  />
+                </div>
+              )}
+
+              {(conditionType === 'company_match' || conditionType === 'location_match' || conditionType === 'utm_source_match') && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Match Value
+                  </label>
+                  <input
+                    type="text"
+                    value={conditionValue}
+                    onChange={(e) => setConditionValue(e.target.value)}
+                    placeholder={`Enter ${conditionType.replace('_match', '')}...`}
+                    className="w-full px-4 py-2 border rounded-lg text-gray-900"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Then do this...
+                </label>
+                <select
+                  value={actionType}
+                  onChange={(e) => setActionType(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg text-gray-900"
+                >
+                  <option value="slack">Send Slack notification</option>
+                  <option value="email">Send email</option>
+                  <option value="webhook">Call webhook</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={saveAlert}
+                  disabled={saving || !name.trim()}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg"
+                >
+                  {saving ? 'Saving...' : editingAlert ? 'Update' : 'Create'}
+                </button>
+                <button
+                  onClick={resetForm}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {alerts.map((alert) => (
+            <div key={alert.id} className="bg-white rounded-lg shadow-sm border p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4 flex-1">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Bell className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-semibold text-gray-900">{alert.name}</h3>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        alert.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {alert.enabled ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>When: {alert.conditions?.type?.replace(/_/g, ' ')}</span>
+                        {alert.conditions?.value && <span className="font-medium">({alert.conditions.value})</span>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="ml-6">Then: Send {alert.actions?.type} notification</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => toggleAlert(alert.id, alert.enabled)}
+                    className={`px-3 py-1 rounded text-sm font-medium ${
+                      alert.enabled 
+                        ? 'bg-gray-200 hover:bg-gray-300 text-gray-900' 
+                        : 'bg-green-100 hover:bg-green-200 text-green-800'
+                    }`}
+                  >
+                    {alert.enabled ? 'Disable' : 'Enable'}
+                  </button>
+                  <button
+                    onClick={() => editAlert(alert)}
+                    className="p-2 text-gray-600 hover:text-purple-600"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => deleteAlert(alert.id)}
+                    className="p-2 text-gray-600 hover:text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {alerts.length === 0 && !showForm && (
+            <div className="text-center py-12 bg-white rounded-lg border">
+              <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No alert rules yet</h3>
+              <p className="text-gray-600 mb-4">Create your first alert to get notified about important events</p>
+              <button
+                onClick={() => setShowForm(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+              >
+                <Plus className="w-4 h-4" />
+                Create Alert
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

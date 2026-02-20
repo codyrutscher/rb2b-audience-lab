@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase, type Visitor } from "@/lib/supabase";
-import { Eye, Users, TrendingUp, Clock, Search, Filter } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import { supabase, type Visitor } from "@/lib/supabase";
+import { Users, TrendingUp, Clock, Search, Download } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { getCurrentUser } from "@/lib/supabase-auth";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,8 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterIdentified, setFilterIdentified] = useState<'all' | 'identified' | 'anonymous'>('all');
   const [filterDevice, setFilterDevice] = useState<'all' | 'mobile' | 'desktop'>('all');
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     loadVisitors();
@@ -114,35 +117,66 @@ export default function Dashboard() {
     return <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">❄️ Cold</span>;
   }
 
+  async function exportToCSV() {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        setExportError('Please log in to export data');
+        setExporting(false);
+        return;
+      }
+
+      const response = await fetch('/api/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workspaceId: user.id,
+          type: 'visitors',
+          filters: {},
+        }),
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `visitors_${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        setExportError('Export failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Export failed:', error);
+      setExportError('Export failed. Please check your connection and try again.');
+    }
+    setExporting(false);
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      <nav className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <Eye className="w-6 h-6 text-purple-600" />
-              <span className="text-xl font-bold text-gray-900">Audience Lab</span>
-            </Link>
-            <div className="flex gap-4">
-              <Link href="/dashboard" className="text-purple-600 font-medium">
-                Dashboard
-              </Link>
-              <Link href="/dashboard/install" className="text-gray-600 hover:text-gray-900">
-                Install
-              </Link>
-              <Link href="/dashboard/settings" className="text-gray-600 hover:text-gray-900">
-                Settings
-              </Link>
-              <Link href="/docs" className="text-gray-600 hover:text-gray-900">
-                Docs
-              </Link>
-            </div>
+    <div className="p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Visitor Dashboard</h1>
+          <div className="flex flex-col items-end gap-2">
+            <button
+              onClick={exportToCSV}
+              disabled={exporting}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg transition"
+            >
+              <Download className="w-4 h-4" />
+              {exporting ? 'Exporting...' : 'Export CSV'}
+            </button>
+            {exportError && (
+              <div className="text-sm text-red-600">{exportError}</div>
+            )}
           </div>
         </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Visitor Dashboard</h1>
 
         {stats.total === 0 && (
           <div className="mb-8 p-6 bg-purple-50 border border-purple-200 rounded-lg">
@@ -266,7 +300,7 @@ export default function Dashboard() {
             </table>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

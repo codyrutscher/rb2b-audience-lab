@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { Eye, Activity, User, MousePointer, FileText, Clock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { formatDistanceToNow } from "date-fns";
@@ -66,30 +65,8 @@ export default function ActivityFeedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <nav className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <Eye className="w-6 h-6 text-purple-600" />
-              <span className="text-xl font-bold text-gray-900">Audience Lab</span>
-            </Link>
-            <div className="flex gap-4">
-              <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
-                Dashboard
-              </Link>
-              <Link href="/dashboard/activity" className="text-purple-600 font-medium">
-                Activity
-              </Link>
-              <Link href="/dashboard/settings" className="text-gray-600 hover:text-gray-900">
-                Settings
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="p-8">
+      <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Real-Time Activity</h1>
@@ -146,7 +123,7 @@ export default function ActivityFeedPage() {
             </div>
           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

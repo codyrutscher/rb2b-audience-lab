@@ -80,24 +80,8 @@ export default function VisitorDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <nav className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <Eye className="w-6 h-6 text-purple-600" />
-              <span className="text-xl font-bold text-gray-900">Audience Lab</span>
-            </Link>
-            <div className="flex gap-4">
-              <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
-                Dashboard
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="p-8">
+      <div className="max-w-7xl mx-auto">
         <Link href="/dashboard" className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 mb-6">
           <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
@@ -216,7 +200,7 @@ export default function VisitorDetailPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
