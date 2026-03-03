@@ -14,7 +14,8 @@ import {
   Settings, 
   Code,
   LogOut,
-  Sparkles
+  Sparkles,
+  Mail
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useState } from "react";
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/activity", label: "Activity", icon: <Activity className="w-5 h-5" /> },
   { href: "/dashboard/analytics", label: "Analytics", icon: <BarChart3 className="w-5 h-5" /> },
   { href: "/dashboard/segments", label: "Segments", icon: <Filter className="w-5 h-5" /> },
+  { href: "/dashboard/reactivate", label: "Reactivate", icon: <Mail className="w-5 h-5" /> },
   { href: "/dashboard/alerts", label: "Alerts", icon: <Bell className="w-5 h-5" /> },
   { href: "/dashboard/team", label: "Team", icon: <Users className="w-5 h-5" /> },
   { href: "/dashboard/api-keys", label: "API Keys", icon: <Key className="w-5 h-5" /> },

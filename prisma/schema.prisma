@@ -1,0 +1,209 @@
+// Reactivate tables: rt_* prefix to avoid collision with rb2b segments
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model RtAccount {
+  id          String   @id @default(uuid())
+  workspaceId String   @unique @map("workspace_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  webhooks          RtWebhook[]
+  contacts          RtContact[]
+  segments          RtSegment[]
+  knowledgeBanks    RtKnowledgeBank[]
+  segmentCampaigns  RtSegmentCampaign[]
+  emailSends        RtEmailSend[]
+  unsubscribes      RtAccountUnsubscribe[]
+
+  @@map("rt_accounts")
+}
+
+model RtWebhook {
+  id        String   @id @default(uuid())
+  accountId String   @map("account_id")
+  account   RtAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("rt_webhooks")
+}
+
+model RtContact {
+  id        String   @id @default(uuid())
+  accountId String   @map("account_id")
+  account   RtAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  email     String
+  firstName String?  @map("first_name")
+  lastName  String?  @map("last_name")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  events    RtContactEvent[]
+  segmentState RtContactSegmentState?
+  emailSends RtEmailSend[]
+
+  @@unique([accountId, email])
+  @@map("rt_contacts")
+}
+
+model RtContactEvent {
+  id        String   @id @default(uuid())
+  accountId String   @map("account_id")
+  contactId String   @map("contact_id")
+  contact   RtContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  url       String?
+  eventType String   @map("event_type")
+  ts        DateTime
+  metadata  Json?    @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("rt_contact_events")
+}
+
+model RtJob {
+  id        String   @id @default(uuid())
+  name      String
+  payload   Json
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  error     String?
+
+  @@map("rt_jobs")
+}
+
+model RtSegment {
+  id            String   @id @default(uuid())
+  accountId     String   @map("account_id")
+  account       RtAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name          String
+  priority      Int      @default(999)
+  isSuppression Boolean  @default(false) @map("is_suppression")
+  enabled       Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  rules         RtSegmentRule[]
+  contactStates RtContactSegmentState[]
+  segmentCampaigns RtSegmentCampaign[]
+
+  @@map("rt_segments")
+}
+
+model RtSegmentRule {
+  id        String   @id @default(uuid())
+  segmentId String   @map("segment_id")
+  segment   RtSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  ruleType  String   @map("rule_type")
+  ruleValue String   @map("rule_value")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("rt_segment_rules")
+}
+
+model RtContactSegmentState {
+  id          String   @id @default(uuid())
+  contactId   String   @unique @map("contact_id")
+  contact     RtContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  segmentId   String?  @map("segment_id")
+  segment     RtSegment? @relation(fields: [segmentId], references: [id], onDelete: SetNull)
+  evaluatedAt DateTime @default(now()) @map("evaluated_at")
+
+  @@map("rt_contact_segment_state")
+}
+
+model RtKnowledgeBank {
+  id          String    @id @default(uuid())
+  accountId   String    @map("account_id")
+  account     RtAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  documents   RtKnowledgeDocument[]
+  segmentCampaigns RtSegmentCampaign[]
+
+  @@map("rt_knowledge_banks")
+}
+
+model RtKnowledgeDocument {
+  id              String   @id @default(uuid())
+  knowledgeBankId String   @map("knowledge_bank_id")
+  knowledgeBank   RtKnowledgeBank @relation(fields: [knowledgeBankId], references: [id], onDelete: Cascade)
+  filename        String
+  status          String   @default("pending")
+  hash            String?
+  storagePath     String?  @map("storage_path")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  chunks          RtKnowledgeChunk[]
+
+  @@map("rt_knowledge_documents")
+}
+
+model RtKnowledgeChunk {
+  id              String   @id
+  knowledgeBankId String   @map("knowledge_bank_id")
+  documentId      String   @map("document_id")
+  chunkIndex      Int      @map("chunk_index")
+  text            String   @db.Text
+  metadata        Json?    @default("{}")
+  createdAt       DateTime @default(now()) @map("created_at")
+  document        RtKnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@map("rt_knowledge_chunks")
+}
+
+model RtSegmentCampaign {
+  id               String    @id @default(uuid())
+  accountId        String    @map("account_id")
+  account          RtAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  segmentId        String    @map("segment_id")
+  segment          RtSegment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  knowledgeBankId  String    @map("knowledge_bank_id")
+  knowledgeBank    RtKnowledgeBank @relation(fields: [knowledgeBankId], references: [id], onDelete: Cascade)
+  templateId       String    @map("template_id")
+  subjectText      String    @map("subject_text")
+  ctaUrl           String?   @map("cta_url")
+  ctaLabel         String?   @map("cta_label")
+  queryHint        String?   @map("query_hint")
+  copyPrompt       String?   @map("copy_prompt") @db.Text
+  enabled          Boolean   @default(true)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  emailSends       RtEmailSend[]
+
+  @@map("rt_segment_campaigns")
+}
+
+model RtEmailSend {
+  id                 String   @id @default(uuid())
+  accountId          String   @map("account_id")
+  account            RtAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  contactId          String   @map("contact_id")
+  contact            RtContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  segmentCampaignId  String   @map("segment_campaign_id")
+  segmentCampaign    RtSegmentCampaign @relation(fields: [segmentCampaignId], references: [id], onDelete: Cascade)
+  templateId         String   @map("template_id")
+  resendMessageId    String?  @map("resend_message_id")
+  status             String   @default("sent")
+  error              String?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@map("rt_email_sends")
+}
+
+model RtAccountUnsubscribe {
+  id        String   @id @default(uuid())
+  accountId String   @map("account_id")
+  account   RtAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  email     String
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([accountId, email])
+  @@map("rt_account_unsubscribes")
+}
