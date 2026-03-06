@@ -2,7 +2,7 @@
  * Parse resolutions-sample.csv format (tab-separated) into PixelEvent[] for ingest.
  * CSV columns: PIXEL_ID, HEM_SHA256, EVENT_DATE, REFERRER_URL, FULL_URL, EDID, then resolution fields
  */
-import type { PixelEvent } from "../pixelApi";
+import type { PixelEvent } from "./pixelApi";
 
 const TOP_LEVEL_FIELDS = ["PIXEL_ID", "HEM_SHA256", "EVENT_DATE", "REFERRER_URL", "FULL_URL", "EDID"];
 
