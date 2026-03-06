@@ -64,7 +64,7 @@ export default function Docs() {
         <div className="mt-12 p-6 bg-purple-50 rounded-lg border border-purple-200">
           <h3 className="font-semibold text-lg mb-2">Environment Variables</h3>
           <p className="text-sm text-gray-700 mb-4">
-            Copy .env.local.example to .env.local and add your Supabase credentials
+            Copy .env.example to .env and add your Supabase credentials
           </p>
           <pre className="bg-white p-3 rounded text-sm">
 {`NEXT_PUBLIC_SUPABASE_URL=your-url

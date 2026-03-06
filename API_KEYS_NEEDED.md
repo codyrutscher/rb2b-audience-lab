@@ -116,7 +116,7 @@
 
 ## Environment Variables Setup
 
-Add these to your `.env.local` and Vercel:
+Add these to your `.env` and Vercel:
 
 ```bash
 # Supabase (Already configured)

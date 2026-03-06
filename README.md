@@ -76,21 +76,25 @@ npm install
    - `004_events_tracking.sql`
    - `005_advanced_tracking.sql`
    - `006_missing_features.sql`
+   - `007_retarget_integration.sql`
 4. Disable email confirmation in Authentication settings
 5. Copy your project URL and keys from Settings > API
 
 ### 3. Configure Environment
 
 ```bash
-cp .env.local.example .env.local
+cp .env.example .env
 ```
 
-Edit `.env.local` with your Supabase credentials:
+Edit `.env` with your Supabase credentials:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+# For Reactivate: direct Postgres URL (same Supabase project → Settings → Database)
+DATABASE_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres
+# Optional: HUGGINGFACE_TOKEN, PINECONE_API_KEY, PINECONE_INDEX_NAME, RESEND_API_KEY, RESEND_FROM_EMAIL
 ```
 
 ### 4. Run Development Server
@@ -100,6 +104,21 @@ npm run dev
 ```
 
 Visit `http://localhost:3000` to see your app!
+
+### 5. Reactivate
+
+The **Reactivate** feature adds AI-powered email retargeting:
+
+1. **Apply migration** `007_retarget_integration.sql` in Supabase SQL Editor (creates rt_* tables, links to workspaces).
+2. **Add `DATABASE_URL`** to your `.env` — same database as Supabase; get it from Supabase → Settings → Database → Connection string (URI).
+3. **Run `npx prisma generate`** to generate the Prisma client.
+4. **Run the worker** (separate terminal) for document processing and email jobs:
+   ```bash
+   npm run worker
+   ```
+5. Go to **Dashboard → Reactivate** to create segments, knowledge banks, upload docs, and preview emails.
+
+Optional env for full functionality: `HUGGINGFACE_TOKEN`, `PINECONE_API_KEY`, `PINECONE_INDEX_NAME`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `APP_BASE_URL`.
 
 ## 🚀 Deployment
 
@@ -217,6 +236,7 @@ Score ranges:
 - `/dashboard/activity` - Real-time activity feed
 - `/dashboard/analytics` - Analytics & reports with charts
 - `/dashboard/segments` - Saved segments management
+- `/dashboard/reactivate` - Reactivate (AI email retargeting: segments, knowledge banks, copy preview)
 - `/dashboard/alerts` - Custom alert rules
 - `/dashboard/team` - Team member management
 - `/dashboard/api-keys` - API key management
