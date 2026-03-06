@@ -20,8 +20,66 @@ model RtAccount {
   segmentCampaigns  RtSegmentCampaign[]
   emailSends        RtEmailSend[]
   unsubscribes      RtAccountUnsubscribe[]
+  pixels            RtPixel[]
+  pixelSchedules    RtPixelSchedule[]
+  emailTemplates    RtEmailTemplate[]
 
   @@map("rt_accounts")
+}
+
+model RtPixel {
+  id                   String   @id @default(uuid())
+  accountId            String   @map("account_id")
+  account              RtAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name                 String   @map("name")
+  websiteName          String   @map("website_name")
+  websiteUrl           String   @map("website_url")
+  webhookUrl           String?  @map("webhook_url")
+  version              String   @default("v4") @map("version")
+  audiencelabPixelId   String?  @map("audiencelab_pixel_id")
+  audiencelabInstallUrl String? @map("audiencelab_install_url")
+  audiencelabApiKey    String?  @map("audiencelab_api_key")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  contactEvents       RtContactEvent[]
+  schedule             RtPixelSchedule?
+
+  @@map("rt_pixels")
+}
+
+model RtPixelSchedule {
+  id           String    @id @default(uuid())
+  pixelId      String    @unique @map("pixel_id")
+  pixel        RtPixel   @relation(fields: [pixelId], references: [id], onDelete: Cascade)
+  accountId    String    @map("account_id")
+  account      RtAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  intervalType String    @map("interval_type")
+  intervalValue Int     @map("interval_value")
+  enabled      Boolean   @default(true)
+  lastRunAt    DateTime? @map("last_run_at")
+  nextRunAt    DateTime  @default(now()) @map("next_run_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  runs         RtScheduleRun[]
+
+  @@map("rt_pixel_schedules")
+}
+
+model RtScheduleRun {
+  id              String    @id @default(uuid())
+  scheduleId      String    @map("schedule_id")
+  schedule        RtPixelSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  startedAt       DateTime  @default(now()) @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  status          String    @default("running")
+  pagesFetched    Int       @default(0) @map("pages_fetched")
+  contactsUpserted Int      @default(0) @map("contacts_upserted")
+  eventsInserted  Int       @default(0) @map("events_inserted")
+  eventsSkipped   Int       @default(0) @map("events_skipped")
+  contactsEnqueued Int      @default(0) @map("contacts_enqueued")
+  error           String?   @map("error")
+
+  @@map("rt_schedule_runs")
 }
 
 model RtWebhook {
@@ -41,6 +99,9 @@ model RtContact {
   email     String
   firstName String?  @map("first_name")
   lastName  String?  @map("last_name")
+  edid      String?  @map("edid")
+  hemSha256 String?  @map("hem_sha256")
+  pixelData Json?    @default("{}") @map("pixel_data")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   events    RtContactEvent[]
@@ -52,15 +113,21 @@ model RtContact {
 }
 
 model RtContactEvent {
-  id        String   @id @default(uuid())
-  accountId String   @map("account_id")
-  contactId String   @map("contact_id")
-  contact   RtContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  url       String?
-  eventType String   @map("event_type")
-  ts        DateTime
-  metadata  Json?    @default("{}")
-  createdAt DateTime @default(now()) @map("created_at")
+  id             String    @id @default(uuid())
+  accountId      String    @map("account_id")
+  contactId      String    @map("contact_id")
+  contact        RtContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  pixelId        String?   @map("pixel_id")
+  pixel          RtPixel?  @relation(fields: [pixelId], references: [id], onDelete: SetNull)
+  url            String?
+  fullUrl        String?   @map("full_url")
+  referrerUrl    String?   @map("referrer_url")
+  eventType      String    @map("event_type")
+  ts             DateTime
+  metadata       Json?     @default("{}")
+  resolution     Json?     @default("{}")
+  sourceEventKey String?   @unique @map("source_event_key")
+  createdAt      DateTime  @default(now()) @map("created_at")
 
   @@map("rt_contact_events")
 }
@@ -83,23 +150,39 @@ model RtSegment {
   account       RtAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   name          String
   priority      Int      @default(999)
-  isSuppression Boolean  @default(false) @map("is_suppression")
-  enabled       Boolean  @default(true)
-  createdAt     DateTime @default(now()) @map("created_at")
+  isSuppression        Boolean  @default(false) @map("is_suppression")
+  enabled              Boolean  @default(true)
+  createdAt            DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
   rules         RtSegmentRule[]
+  ruleGroups    RtSegmentRuleGroup[]
   contactStates RtContactSegmentState[]
   segmentCampaigns RtSegmentCampaign[]
 
   @@map("rt_segments")
 }
 
+model RtSegmentRuleGroup {
+  id        String   @id @default(uuid())
+  segmentId String   @map("segment_id")
+  segment   RtSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  logicalOp String   @map("logical_op")
+  groupOrder Int     @default(0) @map("group_order")
+  rules     RtSegmentRule[]
+
+  @@map("rt_segment_rule_groups")
+}
+
 model RtSegmentRule {
   id        String   @id @default(uuid())
   segmentId String   @map("segment_id")
   segment   RtSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  groupId   String?  @map("group_id")
+  group     RtSegmentRuleGroup? @relation(fields: [groupId], references: [id], onDelete: Cascade)
   ruleType  String   @map("rule_type")
   ruleValue String   @map("rule_value")
+  field     String?
+  operator  String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -127,8 +210,30 @@ model RtKnowledgeBank {
   updatedAt   DateTime  @updatedAt @map("updated_at")
   documents   RtKnowledgeDocument[]
   segmentCampaigns RtSegmentCampaign[]
+  emailTemplates RtEmailTemplate[]
 
   @@map("rt_knowledge_banks")
+}
+
+model RtEmailTemplate {
+  id             String    @id @default(uuid())
+  accountId      String    @map("account_id")
+  account        RtAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name           String
+  knowledgeBankId String  @map("knowledge_bank_id")
+  knowledgeBank   RtKnowledgeBank @relation(fields: [knowledgeBankId], references: [id], onDelete: Cascade)
+  copyPrompt     String?   @map("copy_prompt") @db.Text
+  subjectTemplate String  @map("subject_template")
+  templateId     String    @map("template_id")
+  queryHint      String?   @map("query_hint")
+  ctaUrl         String?   @map("cta_url")
+  ctaLabel       String?   @map("cta_label")
+  enabled        Boolean   @default(false)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  segmentCampaigns RtSegmentCampaign[]
+
+  @@map("rt_email_templates")
 }
 
 model RtKnowledgeDocument {
@@ -160,23 +265,29 @@ model RtKnowledgeChunk {
 }
 
 model RtSegmentCampaign {
-  id               String    @id @default(uuid())
-  accountId        String    @map("account_id")
-  account          RtAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  segmentId        String    @map("segment_id")
-  segment          RtSegment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
-  knowledgeBankId  String    @map("knowledge_bank_id")
-  knowledgeBank    RtKnowledgeBank @relation(fields: [knowledgeBankId], references: [id], onDelete: Cascade)
-  templateId       String    @map("template_id")
-  subjectText      String    @map("subject_text")
-  ctaUrl           String?   @map("cta_url")
-  ctaLabel         String?   @map("cta_label")
-  queryHint        String?   @map("query_hint")
-  copyPrompt       String?   @map("copy_prompt") @db.Text
-  enabled          Boolean   @default(true)
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  emailSends       RtEmailSend[]
+  id                   String    @id @default(uuid())
+  accountId            String    @map("account_id")
+  account              RtAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  segmentId            String    @map("segment_id")
+  segment              RtSegment  @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  knowledgeBankId      String    @map("knowledge_bank_id")
+  knowledgeBank        RtKnowledgeBank @relation(fields: [knowledgeBankId], references: [id], onDelete: Cascade)
+  emailTemplateId      String?   @map("email_template_id")
+  emailTemplate        RtEmailTemplate? @relation(fields: [emailTemplateId], references: [id], onDelete: SetNull)
+  templateId           String    @map("template_id")
+  subjectText          String    @map("subject_text")
+  ctaUrl               String?   @map("cta_url")
+  ctaLabel             String?   @map("cta_label")
+  queryHint            String?   @map("query_hint")
+  copyPrompt           String?   @map("copy_prompt") @db.Text
+  emailFieldMap        String?   @map("email_field_map")
+  triggerType          String    @default("on_segment_update") @map("trigger_type")
+  triggerIntervalType  String?   @map("trigger_interval_type")
+  triggerIntervalValue Int?      @map("trigger_interval_value")
+  enabled              Boolean   @default(true)
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  emailSends           RtEmailSend[]
 
   @@map("rt_segment_campaigns")
 }
@@ -190,6 +301,8 @@ model RtEmailSend {
   segmentCampaignId  String   @map("segment_campaign_id")
   segmentCampaign    RtSegmentCampaign @relation(fields: [segmentCampaignId], references: [id], onDelete: Cascade)
   templateId         String   @map("template_id")
+  emailTemplateId    String?  @map("email_template_id")
+  resolvedEmail     String?  @map("resolved_email")
   resendMessageId    String?  @map("resend_message_id")
   status             String   @default("sent")
   error              String?

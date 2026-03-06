@@ -13,7 +13,7 @@ export async function GET(
   const { id } = await params;
   const segment = await prisma.rtSegment.findFirst({
     where: { id, accountId },
-    include: { rules: true },
+    include: { rules: true, ruleGroups: { include: { rules: true }, orderBy: { groupOrder: "asc" } } },
   });
   if (!segment) {
     return NextResponse.json({ error: "Segment not found" }, { status: 404 });
@@ -46,7 +46,7 @@ export async function PUT(
       ...(typeof is_suppression === "boolean" && { isSuppression: is_suppression }),
       ...(typeof enabled === "boolean" && { enabled }),
     },
-    include: { rules: true },
+    include: { rules: true, ruleGroups: { include: { rules: true }, orderBy: { groupOrder: "asc" } } },
   });
   return NextResponse.json(segment);
 }

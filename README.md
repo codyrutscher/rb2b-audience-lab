@@ -83,10 +83,10 @@ npm install
 ### 3. Configure Environment
 
 ```bash
-cp .env.local.example .env.local
+cp .env.example .env
 ```
 
-Edit `.env.local` with your Supabase credentials:
+Edit `.env` with your Supabase credentials:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
@@ -110,7 +110,7 @@ Visit `http://localhost:3000` to see your app!
 The **Reactivate** feature adds AI-powered email retargeting:
 
 1. **Apply migration** `007_retarget_integration.sql` in Supabase SQL Editor (creates rt_* tables, links to workspaces).
-2. **Add `DATABASE_URL`** to your existing `.env.local` — same database as Supabase; get it from Supabase → Settings → Database → Connection string (URI).
+2. **Add `DATABASE_URL`** to your `.env` — same database as Supabase; get it from Supabase → Settings → Database → Connection string (URI).
 3. **Run `npx prisma generate`** to generate the Prisma client.
 4. **Run the worker** (separate terminal) for document processing and email jobs:
    ```bash

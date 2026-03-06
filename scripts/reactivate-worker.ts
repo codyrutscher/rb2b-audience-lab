@@ -2,11 +2,9 @@ import path from "node:path";
 import fs from "node:fs";
 import { config } from "dotenv";
 
-const root = process.cwd();
-const envLocal = path.join(root, ".env.local");
-const envFile = path.join(root, ".env");
+// Single env file for rb2b — .env (Next.js and worker both use it)
+const envFile = path.join(process.cwd(), ".env");
 if (fs.existsSync(envFile)) config({ path: envFile });
-if (fs.existsSync(envLocal)) config({ path: envLocal });
 
 import { prisma } from "../lib/reactivate/db";
 import { JOB_NAMES, enqueue } from "../lib/reactivate/queue";
@@ -14,6 +12,8 @@ import { evaluateSegmentsForContact } from "../lib/reactivate/jobs/evaluateSegme
 import { processKnowledgeDocument } from "../lib/reactivate/jobs/processKnowledgeDoc";
 import { indexKnowledgeBankDocumentSafe } from "../lib/reactivate/jobs/indexKnowledgeBankDoc";
 import { sendCampaignEmailForContact } from "../lib/reactivate/jobs/sendCampaignEmail";
+import { runFetchPixelDataJob } from "../lib/reactivate/jobs/fetchPixelData";
+import { startSchedulePoller } from "../lib/reactivate/schedulePoller";
 
 const POLL_MS = 2000;
 
@@ -26,7 +26,11 @@ async function processJob(job: { id: string; name: string; payload: unknown }) {
       console.log(`[EvaluateSegmentsJob] contact_id=${contactId} -> segment_id=${segmentId ?? "none"}`);
       if (segmentId) {
         const campaigns = await prisma.rtSegmentCampaign.findMany({
-          where: { segmentId, enabled: true },
+          where: {
+            segmentId,
+            enabled: true,
+            emailFieldMap: { not: null }, // M16: only send when email field is mapped
+          },
           select: { id: true },
         });
         for (const c of campaigns) {
@@ -61,14 +65,24 @@ async function processJob(job: { id: string; name: string; payload: unknown }) {
       await indexKnowledgeBankDocumentSafe(documentId);
       console.log(`[IndexKnowledgeBankDocJob] document_id=${documentId} indexed`);
     }
+  } else if (job.name === JOB_NAMES.FetchPixelData) {
+    const payload = job.payload as { pixel_id?: string; schedule_id?: string };
+    const pixelId = payload?.pixel_id;
+    if (pixelId) {
+      const result = await runFetchPixelDataJob(pixelId, payload?.schedule_id);
+      console.log(
+        `[FetchPixelDataJob] pixel_id=${pixelId} pages=${result.pagesFetched} contacts=${result.contactsUpserted} events=${result.eventsInserted} skipped=${result.eventsSkipped} enqueued=${result.contactsEnqueued}`
+      );
+    }
   }
 }
 
 async function runWorker() {
-  console.log("Reactivate worker started (polling rt_jobs)");
+  console.log("Reactivate worker started (polling rt_jobs + schedules)");
   const hf = process.env.HUGGINGFACE_TOKEN?.trim();
   const pc = process.env.PINECONE_API_KEY?.trim();
   console.log(`Env: HUGGINGFACE_TOKEN=${hf ? "set" : "missing"} PINECONE_API_KEY=${pc ? "set" : "missing"} (optional; needed for embedding/indexing)`);
+  startSchedulePoller();
   while (true) {
     const job = await prisma.rtJob.findFirst({
       where: { status: "pending" },

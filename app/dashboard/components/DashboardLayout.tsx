@@ -10,12 +10,14 @@ import {
   Filter, 
   Bell, 
   Users, 
+  UserCircle2,
   Key, 
   Settings, 
   Code,
   LogOut,
   Sparkles,
-  Mail
+  Mail,
+  FileText
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useState } from "react";
@@ -28,15 +30,17 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
+  { href: "/dashboard/install", label: "Install", icon: <Code className="w-5 h-5" /> },
   { href: "/dashboard/activity", label: "Activity", icon: <Activity className="w-5 h-5" /> },
   { href: "/dashboard/analytics", label: "Analytics", icon: <BarChart3 className="w-5 h-5" /> },
   { href: "/dashboard/segments", label: "Segments", icon: <Filter className="w-5 h-5" /> },
-  { href: "/dashboard/reactivate", label: "Reactivate", icon: <Mail className="w-5 h-5" /> },
+  { href: "/dashboard/contacts", label: "Contacts", icon: <UserCircle2 className="w-5 h-5" /> },
+  { href: "/dashboard/templates", label: "Templates", icon: <FileText className="w-5 h-5" /> },
+  { href: "/dashboard/reactivate", label: "Campaigns", icon: <Mail className="w-5 h-5" /> },
   { href: "/dashboard/alerts", label: "Alerts", icon: <Bell className="w-5 h-5" /> },
   { href: "/dashboard/team", label: "Team", icon: <Users className="w-5 h-5" /> },
   { href: "/dashboard/api-keys", label: "API Keys", icon: <Key className="w-5 h-5" /> },
   { href: "/dashboard/settings", label: "Settings", icon: <Settings className="w-5 h-5" /> },
-  { href: "/dashboard/install", label: "Install", icon: <Code className="w-5 h-5" /> },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

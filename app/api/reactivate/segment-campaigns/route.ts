@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAccountIdFromRequest } from "@/lib/reactivate/auth";
 import { prisma } from "@/lib/reactivate/db";
 import { TEMPLATE_IDS } from "@/lib/reactivate/templates";
+import { EMAIL_FIELD_MAP_OPTIONS } from "@/lib/reactivate/emailResolution";
 
 export async function GET(request: Request) {
   const accountId = await getAccountIdFromRequest(request);
@@ -14,9 +15,13 @@ export async function GET(request: Request) {
     include: {
       segment: { select: { id: true, name: true, isSuppression: true } },
       knowledgeBank: { select: { id: true, name: true } },
+      emailTemplate: { select: { id: true, name: true } },
     },
   });
-  return NextResponse.json({ segment_campaigns: campaigns });
+  return NextResponse.json({
+    segment_campaigns: campaigns,
+    email_field_options: EMAIL_FIELD_MAP_OPTIONS,
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -27,30 +32,63 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const {
     segment_id,
-    knowledge_bank_id,
+    email_template_id,
     template_id,
     subject_text,
     cta_url,
     cta_label,
     query_hint,
     copy_prompt,
+    email_field_map,
     enabled,
+    trigger_type,
+    trigger_interval_type,
+    trigger_interval_value,
   } = body;
-  if (!segment_id || !knowledge_bank_id || !template_id || !subject_text) {
+  if (!segment_id || !email_template_id?.trim()) {
     return NextResponse.json(
-      { error: "segment_id, knowledge_bank_id, template_id, and subject_text are required" },
+      { error: "segment_id and email_template_id are required" },
       { status: 400 }
     );
   }
-  if (!TEMPLATE_IDS.includes(template_id as (typeof TEMPLATE_IDS)[number])) {
+  const tpl = await prisma.rtEmailTemplate.findFirst({
+    where: { id: email_template_id.trim(), accountId },
+    select: { knowledgeBankId: true, copyPrompt: true, subjectTemplate: true, templateId: true, ctaUrl: true, ctaLabel: true, queryHint: true },
+  });
+  if (!tpl) {
+    return NextResponse.json({ error: "Email template not found" }, { status: 404 });
+  }
+  const knowledge_bank_id_resolved = tpl.knowledgeBankId;
+  const templateIdResolved = (template_id?.trim() || tpl.templateId) as (typeof TEMPLATE_IDS)[number];
+  if (enabled === true && (!email_field_map?.trim() || !EMAIL_FIELD_MAP_OPTIONS.includes(email_field_map.trim() as (typeof EMAIL_FIELD_MAP_OPTIONS)[number]))) {
+    return NextResponse.json(
+      { error: "When enabling, email_field_map is required and must be one of: " + EMAIL_FIELD_MAP_OPTIONS.join(", ") },
+      { status: 400 }
+    );
+  }
+  if (!TEMPLATE_IDS.includes(templateIdResolved)) {
     return NextResponse.json(
       { error: `template_id must be one of: ${TEMPLATE_IDS.join(", ")}` },
       { status: 400 }
     );
   }
+  const triggerTypeVal = (trigger_type?.trim() || "on_segment_update") as "on_segment_update" | "scheduled";
+  if (triggerTypeVal !== "on_segment_update" && triggerTypeVal !== "scheduled") {
+    return NextResponse.json({ error: "trigger_type must be on_segment_update or scheduled" }, { status: 400 });
+  }
+  if (triggerTypeVal === "scheduled") {
+    const it = trigger_interval_type?.trim();
+    const iv = trigger_interval_value != null ? Number(trigger_interval_value) : NaN;
+    if (!it || !["minutes", "hours", "days"].includes(it) || !Number.isInteger(iv) || iv < 1) {
+      return NextResponse.json(
+        { error: "When scheduled, trigger_interval_type (minutes|hours|days) and trigger_interval_value (≥1) are required" },
+        { status: 400 }
+      );
+    }
+  }
   const [segment, kb] = await Promise.all([
     prisma.rtSegment.findFirst({ where: { id: segment_id, accountId } }),
-    prisma.rtKnowledgeBank.findFirst({ where: { id: knowledge_bank_id, accountId } }),
+    prisma.rtKnowledgeBank.findFirst({ where: { id: knowledge_bank_id_resolved, accountId } }),
   ]);
   if (!segment) {
     return NextResponse.json({ error: "Segment not found" }, { status: 400 });
@@ -62,18 +100,24 @@ export async function POST(request: NextRequest) {
     data: {
       accountId,
       segmentId: segment_id,
-      knowledgeBankId: knowledge_bank_id,
-      templateId: template_id,
-      subjectText: subject_text,
-      ctaUrl: cta_url ?? null,
-      ctaLabel: cta_label ?? null,
-      queryHint: query_hint ?? null,
-      copyPrompt: copy_prompt !== undefined ? copy_prompt : null,
+      knowledgeBankId: knowledge_bank_id_resolved,
+      emailTemplateId: email_template_id.trim(),
+      templateId: templateIdResolved,
+      subjectText: subject_text?.trim() || tpl.subjectTemplate,
+      ctaUrl: (cta_url?.trim() || tpl.ctaUrl) ?? null,
+      ctaLabel: (cta_label?.trim() || tpl.ctaLabel) ?? null,
+      queryHint: (query_hint?.trim() || tpl.queryHint) ?? null,
+      copyPrompt: copy_prompt ?? tpl.copyPrompt ?? null,
+      emailFieldMap: email_field_map?.trim() || null,
+      triggerType: triggerTypeVal,
+      triggerIntervalType: triggerTypeVal === "scheduled" ? trigger_interval_type?.trim() : null,
+      triggerIntervalValue: triggerTypeVal === "scheduled" ? Number(trigger_interval_value) : null,
       enabled: enabled !== false,
     },
     include: {
       segment: { select: { id: true, name: true } },
       knowledgeBank: { select: { id: true, name: true } },
+      emailTemplate: { select: { id: true, name: true } },
     },
   });
   return NextResponse.json(campaign, { status: 201 });

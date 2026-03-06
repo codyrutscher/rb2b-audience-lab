@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const segments = await prisma.rtSegment.findMany({
     where: { accountId },
     orderBy: { priority: "asc" },
-    include: { rules: true },
+    include: { rules: true, ruleGroups: { include: { rules: true }, orderBy: { groupOrder: "asc" } } },
   });
   return NextResponse.json({ segments });
 }

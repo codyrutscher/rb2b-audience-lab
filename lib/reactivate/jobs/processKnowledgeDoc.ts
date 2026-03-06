@@ -47,6 +47,7 @@ async function extractText(filePath: string, filename: string): Promise<string> 
       );
     }
   }
+  // .txt, .md, .markdown: read as UTF-8, chunk directly (no PDF parsing)
   return fs.readFileSync(filePath, "utf-8");
 }
 

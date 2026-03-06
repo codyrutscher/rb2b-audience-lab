@@ -3,6 +3,7 @@ import { retrieveChunks } from "../retrieval";
 import { generateCopy } from "../copyGeneration";
 import { renderTemplate, type TemplateSlots, type TemplateId } from "../templates";
 import { sendEmail } from "../resend";
+import { resolveEmailForSend } from "../emailResolution";
 
 const COOLDOWN_HOURS = 24;
 
@@ -23,9 +24,22 @@ export async function sendCampaignEmailForContact(
 
   const campaign = await prisma.rtSegmentCampaign.findFirst({
     where: { id: segmentCampaignId, accountId: contact.accountId, enabled: true },
-    include: { segment: true, knowledgeBank: true },
+    include: {
+      segment: true,
+      knowledgeBank: true,
+      emailTemplate: { include: { knowledgeBank: true } },
+    },
   });
   if (!campaign) return { sent: false, error: "Campaign not found or disabled" };
+
+  if (campaign.enabled && !campaign.emailFieldMap?.trim()) {
+    return { sent: false, error: "Campaign enabled but email_field_map not set" };
+  }
+
+  const toEmail = resolveEmailForSend(contact, campaign.emailFieldMap);
+  if (!toEmail || !toEmail.includes("@")) {
+    return { sent: false, error: "No valid email resolved for contact" };
+  }
 
   if (campaign.segment.isSuppression) {
     return { sent: false, error: "Campaign segment is suppression; never send" };
@@ -35,7 +49,7 @@ export async function sendCampaignEmailForContact(
   }
 
   const unsub = await prisma.rtAccountUnsubscribe.findUnique({
-    where: { accountId_email: { accountId: contact.accountId, email: contact.email } },
+    where: { accountId_email: { accountId: contact.accountId, email: toEmail } },
   });
   if (unsub) return { sent: false, error: "Contact unsubscribed" };
 
@@ -50,53 +64,62 @@ export async function sendCampaignEmailForContact(
   });
   if (recentSend) return { sent: false, error: "Cooldown: already sent in last 24h" };
 
+  const kbId = campaign.emailTemplate?.knowledgeBankId ?? campaign.knowledgeBankId;
+  const copyPrompt = campaign.emailTemplate?.copyPrompt ?? campaign.copyPrompt;
+  const subjectText = campaign.emailTemplate?.subjectTemplate ?? campaign.subjectText;
+  const ctaUrl = campaign.emailTemplate?.ctaUrl ?? campaign.ctaUrl;
+  const ctaLabel = campaign.emailTemplate?.ctaLabel ?? campaign.ctaLabel;
+  const queryHint = campaign.emailTemplate?.queryHint ?? campaign.queryHint;
+
   const queryParts: string[] = [campaign.segment.name];
-  if (campaign.queryHint?.trim()) queryParts.push(campaign.queryHint.trim());
+  if (queryHint?.trim()) queryParts.push(queryHint.trim());
   const queryText = queryParts.join(". ");
+
+  const kb = campaign.emailTemplate?.knowledgeBank ?? campaign.knowledgeBank;
 
   let chunks: { text: string }[];
   try {
     const retrieved = await retrieveChunks({
       accountId: contact.accountId,
-      knowledgeBankId: campaign.knowledgeBankId,
+      knowledgeBankId: kbId,
       queryText,
       topK: 8,
     });
     chunks = retrieved;
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    await logSend(contact.accountId, contactId, segmentCampaignId, campaign.templateId, null, "failed", msg);
+    await logSend(contact.accountId, contactId, segmentCampaignId, campaign.templateId, campaign.emailTemplateId, toEmail, null, "failed", msg);
     return { sent: false, error: msg };
   }
 
   const retrievedText =
     chunks.length > 0
       ? chunks.map((c) => c.text).join("\n\n")
-      : campaign.knowledgeBank.description || "We have something relevant for you.";
+      : (kb?.description as string | null) || "We have something relevant for you.";
 
   let personalizedContent: string;
   try {
     personalizedContent = await generateCopy({
       retrievedText,
       firstName: contact.firstName,
-      ctaLabel: campaign.ctaLabel,
-      queryHint: campaign.queryHint ?? undefined,
-      customPrompt: campaign.copyPrompt,
+      ctaLabel: ctaLabel ?? undefined,
+      queryHint: queryHint ?? undefined,
+      customPrompt: copyPrompt,
       maxNewTokens: 350,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    await logSend(contact.accountId, contactId, segmentCampaignId, campaign.templateId, null, "failed", msg);
+    await logSend(contact.accountId, contactId, segmentCampaignId, campaign.templateId, campaign.emailTemplateId, toEmail, null, "failed", msg);
     return { sent: false, error: msg };
   }
 
-  const templateId = campaign.templateId as TemplateId;
+  const templateId = (campaign.emailTemplate?.templateId ?? campaign.templateId) as TemplateId;
   const slots: TemplateSlots = {
     first_name: contact.firstName?.trim() || "there",
     personalized_content: personalizedContent,
-    cta_url: campaign.ctaUrl?.trim() || "",
-    cta_label: campaign.ctaLabel?.trim() || "Learn more",
-    unsubscribe_url: getUnsubscribeUrl(contact.accountId, contact.email),
+    cta_url: ctaUrl?.trim() || "",
+    cta_label: ctaLabel?.trim() || "Learn more",
+    unsubscribe_url: getUnsubscribeUrl(contact.accountId, toEmail),
   };
 
   let html: string;
@@ -104,22 +127,22 @@ export async function sendCampaignEmailForContact(
     html = renderTemplate(templateId, slots);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    await logSend(contact.accountId, contactId, segmentCampaignId, campaign.templateId, null, "failed", msg);
+    await logSend(contact.accountId, contactId, segmentCampaignId, campaign.templateId, campaign.emailTemplateId, toEmail, null, "failed", msg);
     return { sent: false, error: msg };
   }
 
   const { messageId, error: sendError } = await sendEmail({
-    to: contact.email,
-    subject: campaign.subjectText,
+    to: toEmail,
+    subject: subjectText,
     html,
   });
 
   if (sendError) {
-    await logSend(contact.accountId, contactId, segmentCampaignId, campaign.templateId, null, "failed", sendError);
+    await logSend(contact.accountId, contactId, segmentCampaignId, campaign.templateId, campaign.emailTemplateId, toEmail, null, "failed", sendError);
     return { sent: false, error: sendError };
   }
 
-  await logSend(contact.accountId, contactId, segmentCampaignId, campaign.templateId, messageId ?? null, "sent");
+  await logSend(contact.accountId, contactId, segmentCampaignId, campaign.templateId, campaign.emailTemplateId, toEmail, messageId ?? null, "sent");
   return { sent: true };
 }
 
@@ -128,6 +151,8 @@ async function logSend(
   contactId: string,
   segmentCampaignId: string,
   templateId: string,
+  emailTemplateId: string | null,
+  resolvedEmail: string | null,
   resendMessageId: string | null,
   status: string,
   error?: string
@@ -138,6 +163,8 @@ async function logSend(
       contactId,
       segmentCampaignId,
       templateId,
+      emailTemplateId,
+      resolvedEmail,
       resendMessageId,
       status,
       error: error ?? null,

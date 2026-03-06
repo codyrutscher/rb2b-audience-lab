@@ -29,11 +29,19 @@ export async function POST(
     return NextResponse.json({ error: "Knowledge bank not found" }, { status: 404 });
   }
 
+  const ALLOWED_EXT = [".pdf", ".txt", ".md", ".markdown"];
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
   if (!file) {
     return NextResponse.json(
       { error: "No file in request; use multipart field 'file'" },
+      { status: 400 }
+    );
+  }
+  const ext = "." + (file.name.split(".").pop() || "").toLowerCase();
+  if (!ALLOWED_EXT.includes(ext)) {
+    return NextResponse.json(
+      { error: `File type not supported. Use: ${ALLOWED_EXT.join(", ")}` },
       { status: 400 }
     );
   }
