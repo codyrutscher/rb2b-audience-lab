@@ -1,11 +1,13 @@
 // Notification Service for Slack, Email, and Webhooks
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
+function getSupabase(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
 
 export interface VisitorNotification {
   visitorId: string;
@@ -24,6 +26,9 @@ export interface VisitorNotification {
 }
 
 export async function sendVisitorNotifications(workspaceId: string, visitor: VisitorNotification) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+
   // Get all enabled integrations for this workspace
   const { data: integrations } = await supabase
     .from('integrations')
