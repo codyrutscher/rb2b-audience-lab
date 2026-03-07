@@ -57,12 +57,18 @@ Add these in App Platform → your Worker component → Settings → App-Level E
 | `COPY_GENERATION_MODEL` | LLM model, e.g. `meta-llama/Llama-3.2-3B-Instruct` |
 | `UPLOAD_DIR` | Leave default or set to `/tmp/uploads` |
 
+#### For knowledge bank document processing
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` or `SUPABASE_URL` | Supabase project URL (for downloading documents from Storage) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (for Storage access) |
+
 #### Not needed by the worker
 
 | Variable | Omit or optional |
 |----------|-------------------|
-| `NEXT_PUBLIC_*` | Not used by worker |
-| `SUPABASE_SERVICE_ROLE_KEY` | Not used by worker |
+| Other `NEXT_PUBLIC_*` | Not used by worker |
 
 ### 5. Deploy
 
@@ -173,6 +179,16 @@ Both Vercel (Next.js) and the DigitalOcean worker must use the **same** `DATABAS
    - `[FetchPixelDataJob] pixel_id=... pages=... contacts=...`
    - `[EvaluateSegmentsJob] contact_id=... -> segment_id=...`
    - `[SendCampaignEmailJob] contact_id=... campaign_id=... sent=true`
+
+---
+
+## Vercel + Knowledge Bank Uploads
+
+Vercel has a read-only filesystem. Document uploads go to **Supabase Storage** (bucket `knowledge-documents`). Ensure:
+
+1. **Create the bucket** – Run `supabase/migrations/019_knowledge_documents_bucket.sql` in Supabase SQL Editor.
+2. **Vercel env vars**: `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL`
+3. **Worker env vars**: Same as above so the worker can download and process documents.
 
 ---
 

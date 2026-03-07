@@ -1,17 +1,8 @@
-import path from "node:path";
-import fs from "node:fs";
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountIdFromRequest } from "@/lib/reactivate/auth";
 import { prisma } from "@/lib/reactivate/db";
 import { enqueue, JOB_NAMES } from "@/lib/reactivate/queue";
-
-const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads");
-
-function getUploadDir(accountId: string, knowledgeBankId: string, documentId: string) {
-  const dir = path.join(UPLOAD_DIR, accountId, knowledgeBankId, documentId);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  return dir;
-}
+import { uploadDocument } from "@/lib/reactivate/storage";
 
 export async function POST(
   request: NextRequest,
@@ -54,14 +45,21 @@ export async function POST(
     },
   });
 
-  const dir = getUploadDir(accountId, bank.id, doc.id);
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_") || "file";
-  const filePath = path.join(dir, safeName);
-
   const bytes = await file.arrayBuffer();
-  fs.writeFileSync(filePath, Buffer.from(bytes));
+  const buffer = Buffer.from(bytes);
 
-  const storagePath = path.relative(UPLOAD_DIR, filePath);
+  const storagePath = await uploadDocument(accountId, bank.id, doc.id, file.name, buffer);
+  if (!storagePath) {
+    await prisma.rtKnowledgeDocument.update({
+      where: { id: doc.id },
+      data: { status: "failed" },
+    });
+    return NextResponse.json(
+      { error: "Upload failed. Ensure Supabase Storage bucket 'knowledge-documents' exists and SUPABASE_SERVICE_ROLE_KEY is set." },
+      { status: 500 }
+    );
+  }
+
   await prisma.rtKnowledgeDocument.update({
     where: { id: doc.id },
     data: { filename: file.name, storagePath },

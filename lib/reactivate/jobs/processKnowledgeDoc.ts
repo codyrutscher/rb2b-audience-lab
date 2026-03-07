@@ -2,6 +2,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { prisma } from "../db";
 import { enqueue, JOB_NAMES } from "../queue";
+import { downloadDocument } from "../storage";
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads");
 
@@ -32,13 +33,12 @@ function chunkText(text: string): { text: string; index: number }[] {
   return chunks;
 }
 
-async function extractText(filePath: string, filename: string): Promise<string> {
+async function extractTextFromBuffer(buffer: Buffer, filename: string): Promise<string> {
   const ext = path.extname(filename).toLowerCase();
   if (ext === ".pdf") {
     try {
       const pdfParse = await import("pdf-parse");
-      const dataBuffer = fs.readFileSync(filePath);
-      const data = await pdfParse.default(dataBuffer);
+      const data = await pdfParse.default(buffer);
       return data.text || "";
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -47,8 +47,7 @@ async function extractText(filePath: string, filename: string): Promise<string> 
       );
     }
   }
-  // .txt, .md, .markdown: read as UTF-8, chunk directly (no PDF parsing)
-  return fs.readFileSync(filePath, "utf-8");
+  return buffer.toString("utf-8");
 }
 
 export async function processKnowledgeDocument(documentId: string): Promise<void> {
@@ -66,13 +65,20 @@ export async function processKnowledgeDocument(documentId: string): Promise<void
     return;
   }
 
+  let buffer: Buffer;
   const fullPath = path.join(UPLOAD_DIR, doc.storagePath);
-  if (!fs.existsSync(fullPath)) {
-    await prisma.rtKnowledgeDocument.update({
-      where: { id: documentId },
-      data: { status: "failed" },
-    });
-    return;
+  if (fs.existsSync(fullPath)) {
+    buffer = fs.readFileSync(fullPath);
+  } else {
+    const downloaded = await downloadDocument(doc.storagePath);
+    if (!downloaded) {
+      await prisma.rtKnowledgeDocument.update({
+        where: { id: documentId },
+        data: { status: "failed" },
+      });
+      return;
+    }
+    buffer = downloaded;
   }
 
   await prisma.rtKnowledgeDocument.update({
@@ -81,7 +87,7 @@ export async function processKnowledgeDocument(documentId: string): Promise<void
   });
 
   try {
-    const text = await extractText(fullPath, doc.filename);
+    const text = await extractTextFromBuffer(buffer, doc.filename);
     const chunks = chunkText(text);
 
     await prisma.rtKnowledgeChunk.deleteMany({ where: { documentId } });
