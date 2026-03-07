@@ -18,8 +18,8 @@ fi
 echo "Deploying worker essentials to root@$DROPLET_IP:$REMOTE_DIR"
 echo ""
 
-# Create remote dir
-ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new root@$DROPLET_IP "mkdir -p $REMOTE_DIR"
+# Create remote dirs (worker expects scripts/ and lib/reactivate/)
+ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new root@$DROPLET_IP "mkdir -p $REMOTE_DIR/scripts $REMOTE_DIR/lib/reactivate"
 
 # Sync only what the worker needs (no app/, .next, node_modules)
 rsync -avz \
@@ -27,10 +27,11 @@ rsync -avz \
   package.json \
   package-lock.json \
   prisma/ \
-  lib/reactivate/ \
-  scripts/reactivate-worker.ts \
   ecosystem.config.js \
   root@$DROPLET_IP:$REMOTE_DIR/
+
+rsync -avz -e "ssh -i $SSH_KEY" lib/reactivate/ root@$DROPLET_IP:$REMOTE_DIR/lib/reactivate/
+rsync -avz -e "ssh -i $SSH_KEY" scripts/reactivate-worker.ts root@$DROPLET_IP:$REMOTE_DIR/scripts/
 
 echo ""
 echo "Done. On the droplet run:"
