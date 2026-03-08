@@ -3,13 +3,14 @@ import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next({ request });
+  let response = NextResponse.next({ request });
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseAnonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn("[middleware] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
     return response;
   }
 
@@ -19,24 +20,41 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet: { name: string; value: string; options?: object }[]) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
+        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            try {
+              const opts =
+                options && typeof options === "object"
+                  ? {
+                      path: typeof options.path === "string" ? options.path : "/",
+                      maxAge: typeof options.maxAge === "number" ? options.maxAge : undefined,
+                      expires:
+                        options.expires instanceof Date ? options.expires : undefined,
+                      httpOnly: Boolean(options.httpOnly),
+                      secure: Boolean(options.secure),
+                      sameSite: (options.sameSite as "lax" | "strict" | "none") || "lax",
+                    }
+                  : undefined;
+              response.cookies.set(name, value, opts);
+            } catch {
+              response.cookies.set(name, value);
+            }
+          });
         },
       },
     });
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
 
     return response;
-  } catch (err) {
-    console.error("[middleware]", err);
-    return response;
+  } catch {
+    return NextResponse.next({ request });
   }
 }
 
