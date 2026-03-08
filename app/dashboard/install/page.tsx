@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Copy, Check, Code, Plus } from "lucide-react";
 
@@ -29,11 +29,7 @@ export default function InstallPage() {
   const [pixelWebsiteName, setPixelWebsiteName] = useState("");
   const [pixelWebsiteUrl, setPixelWebsiteUrl] = useState("");
 
-  useEffect(() => {
-    loadPixels();
-  }, []);
-
-  async function loadPixels() {
+  const loadPixels = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/pixels`, { credentials: "include" });
@@ -49,7 +45,11 @@ export default function InstallPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    loadPixels();
+  }, [loadPixels]);
 
   const selectedPixel = pixels.find((p) => p.id === selectedPixelId);
   const pixelsWithInstallUrl = pixels.filter((p) => p.audiencelabInstallUrl);
