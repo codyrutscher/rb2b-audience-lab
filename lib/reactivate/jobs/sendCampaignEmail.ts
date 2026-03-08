@@ -4,6 +4,9 @@ import { generateCopy } from "../copyGeneration";
 import { renderTemplate, type TemplateSlots, type TemplateId } from "../templates";
 import { sendEmail } from "../resend";
 import { resolveEmailForSend } from "../emailResolution";
+import { compileRecipe } from "../templates/compiler";
+import { templateSlotsToEmailSlots } from "../templates/slotsBridge";
+import { isValidRecoveryType } from "../recipes";
 
 const COOLDOWN_HOURS = 24;
 
@@ -70,6 +73,7 @@ export async function sendCampaignEmailForContact(
   const ctaUrl = campaign.emailTemplate?.ctaUrl ?? campaign.ctaUrl;
   const ctaLabel = campaign.emailTemplate?.ctaLabel ?? campaign.ctaLabel;
   const queryHint = campaign.emailTemplate?.queryHint ?? campaign.queryHint;
+  const variableMappings = (campaign.emailTemplate?.variableMappings ?? {}) as Record<string, string> | null;
 
   const queryParts: string[] = [campaign.segment.name];
   if (queryHint?.trim()) queryParts.push(queryHint.trim());
@@ -97,6 +101,16 @@ export async function sendCampaignEmailForContact(
       ? chunks.map((c) => c.text).join("\n\n")
       : (kb?.description as string | null) || "We have something relevant for you.";
 
+  const pixelData = (contact.pixelData ?? {}) as Record<string, unknown>;
+  const extraVariables: Record<string, string> = {};
+  if (variableMappings && typeof variableMappings === "object") {
+    for (const [varName, pixelField] of Object.entries(variableMappings)) {
+      if (!pixelField?.trim()) continue;
+      const val = pixelData[pixelField];
+      extraVariables[varName] = typeof val === "string" ? val : (val != null ? String(val) : "");
+    }
+  }
+
   let personalizedContent: string;
   try {
     personalizedContent = await generateCopy({
@@ -105,6 +119,7 @@ export async function sendCampaignEmailForContact(
       ctaLabel: ctaLabel ?? undefined,
       queryHint: queryHint ?? undefined,
       customPrompt: copyPrompt,
+      extraVariables: Object.keys(extraVariables).length > 0 ? extraVariables : undefined,
       maxNewTokens: 350,
     });
   } catch (e) {
@@ -115,16 +130,36 @@ export async function sendCampaignEmailForContact(
 
   const templateId = (campaign.emailTemplate?.templateId ?? campaign.templateId) as TemplateId;
   const slots: TemplateSlots = {
-    first_name: contact.firstName?.trim() || "there",
+    first_name: contact.firstName?.trim() || (pixelData.FIRST_NAME as string)?.trim() || "there",
     personalized_content: personalizedContent,
     cta_url: ctaUrl?.trim() || "",
     cta_label: ctaLabel?.trim() || "Learn more",
     unsubscribe_url: getUnsubscribeUrl(contact.accountId, toEmail),
+    ...extraVariables,
   };
 
   let html: string;
   try {
-    html = renderTemplate(templateId, slots);
+    const recoveryType = campaign.emailTemplate?.recoveryType;
+    if (recoveryType && isValidRecoveryType(recoveryType)) {
+      const slotDefaults = campaign.emailTemplate?.slotDefaults as Record<string, unknown> | null;
+      const emailSlots = templateSlotsToEmailSlots(
+        slots,
+        {
+          subject: subjectText,
+          preheader: subjectText,
+          headline: "We have something for you",
+          body: personalizedContent,
+          cta_text: ctaLabel?.trim() || "Learn more",
+          cta_url: ctaUrl?.trim() || "",
+          unsubscribe_url: getUnsubscribeUrl(contact.accountId, toEmail),
+        },
+        slotDefaults
+      );
+      html = compileRecipe(recoveryType, emailSlots);
+    } else {
+      html = renderTemplate(templateId, slots);
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     await logSend(contact.accountId, contactId, segmentCampaignId, campaign.templateId, campaign.emailTemplateId, toEmail, null, "failed", msg);

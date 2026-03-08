@@ -148,7 +148,6 @@ export default function ReactivatePage() {
   const [editingCampaign, setEditingCampaign] = useState<SegmentCampaign | null>(null);
   const [campaignSegmentId, setCampaignSegmentId] = useState("");
   const [campaignTemplateId, setCampaignTemplateId] = useState("");
-  const [campaignSubject, setCampaignSubject] = useState("We have something for you");
   const [campaignEmailField, setCampaignEmailField] = useState<string>(EMAIL_FIELD_OPTIONS[0]);
   const [campaignTriggerType, setCampaignTriggerType] = useState<"on_segment_update" | "scheduled">("on_segment_update");
   const [campaignTriggerIntervalType, setCampaignTriggerIntervalType] = useState<"minutes" | "hours" | "days">("minutes");
@@ -340,11 +339,12 @@ export default function ReactivatePage() {
     setError(null);
     setSavingCampaign(true);
     try {
+      const tpl = emailTemplates.find((t) => t.id === campaignTemplateId);
       const payload = {
         segment_id: campaignSegmentId,
         email_template_id: campaignTemplateId,
         template_id: "minimal_recovery",
-        subject_text: campaignSubject,
+        subject_text: tpl?.subjectTemplate,
         email_field_map: campaignEmailField,
         trigger_type: campaignTriggerType,
         trigger_interval_type: campaignTriggerType === "scheduled" ? campaignTriggerIntervalType : undefined,
@@ -376,7 +376,6 @@ export default function ReactivatePage() {
   function resetCampaignForm() {
     setCampaignSegmentId("");
     setCampaignTemplateId("");
-    setCampaignSubject("We have something for you");
     setCampaignEmailField(EMAIL_FIELD_OPTIONS[0]);
     setCampaignTriggerType("on_segment_update");
     setCampaignTriggerIntervalType("minutes");
@@ -388,7 +387,6 @@ export default function ReactivatePage() {
     setEditingCampaign(c);
     setCampaignSegmentId(c.segmentId);
     setCampaignTemplateId(c.emailTemplateId || "");
-    setCampaignSubject(c.subjectText);
     setCampaignEmailField(c.emailFieldMap || EMAIL_FIELD_OPTIONS[0]);
     setCampaignTriggerType((c.triggerType as "on_segment_update" | "scheduled") || "on_segment_update");
     setCampaignTriggerIntervalType((c.triggerIntervalType as "minutes" | "hours" | "days") || "minutes");
@@ -453,225 +451,6 @@ export default function ReactivatePage() {
     <div className="p-8">
       <h1 className="text-2xl font-bold text-white mb-6">Campaigns</h1>
 
-      {/* Pixels */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold text-white mb-4">Pixels</h2>
-        <p className="text-gray-400 text-sm mb-4">
-          Create pixels to fetch visitor data from Audiencelab. Provide your API key to create via their API.
-        </p>
-        {!showPixelForm ? (
-          <button
-            onClick={() => setShowPixelForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-accent-primary/20 text-accent-primary rounded-lg hover:bg-accent-primary/30 transition"
-          >
-            <Radio className="w-4 h-4" /> New Pixel
-          </button>
-        ) : (
-          <div className="bg-dark-secondary border border-dark-border rounded-lg p-4 space-y-3 max-w-md">
-            <input
-              placeholder="Pixel name (e.g. Main Site)"
-              value={pixelName}
-              onChange={(e) => setPixelName(e.target.value)}
-              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500"
-            />
-            <input
-              placeholder="Website name"
-              value={pixelWebsiteName}
-              onChange={(e) => setPixelWebsiteName(e.target.value)}
-              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500"
-            />
-            <input
-              placeholder="Website URL (https://...)"
-              value={pixelWebsiteUrl}
-              onChange={(e) => setPixelWebsiteUrl(e.target.value)}
-              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500"
-            />
-            <input
-              placeholder="Webhook URL (optional)"
-              value={pixelWebhookUrl}
-              onChange={(e) => setPixelWebhookUrl(e.target.value)}
-              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500"
-            />
-            <input
-              type="password"
-              placeholder="Audiencelab API key (optional - to create via API)"
-              value={pixelApiKey}
-              onChange={(e) => setPixelApiKey(e.target.value)}
-              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={createPixel}
-                disabled={creatingPixel}
-                className="px-4 py-2 bg-accent-primary text-white rounded-lg hover:opacity-90 disabled:opacity-50"
-              >
-                {creatingPixel ? "Creating…" : "Create"}
-              </button>
-              <button
-                onClick={() => {
-                  setShowPixelForm(false);
-                  setPixelName("");
-                  setPixelWebsiteName("");
-                  setPixelWebsiteUrl("");
-                  setPixelWebhookUrl("");
-                  setPixelApiKey("");
-                }}
-                className="px-4 py-2 text-gray-400 hover:text-white"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-        <div className="mt-4 space-y-2">
-          {pixels.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center justify-between p-3 bg-dark-secondary border border-dark-border rounded-lg"
-            >
-              <div>
-                <span className="text-white font-medium">{p.name}</span>
-                <span className="text-gray-500 text-sm ml-2">{p.websiteName}</span>
-                {p.audiencelabPixelId && (
-                  <div className="text-gray-400 text-xs mt-1">ID: {p.audiencelabPixelId}</div>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <a
-                    href={p.websiteUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-accent-primary text-sm hover:underline"
-                  >
-                    {p.websiteUrl}
-                  </a>
-                  {p.canFetch && (
-                    <button
-                      onClick={() => fetchPixelData(p.id)}
-                      disabled={fetchingPixelId === p.id}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-accent-primary/20 text-accent-primary rounded text-sm hover:bg-accent-primary/30 disabled:opacity-50"
-                    >
-                      <Download className="w-4 h-4" />
-                      {fetchingPixelId === p.id ? "Fetching…" : "Fetch"}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setSchedulePixelId(schedulePixelId === p.id ? null : p.id);
-                      if (p.schedule) {
-                        setScheduleIntervalType(p.schedule.intervalType as "minutes" | "hours" | "days");
-                        setScheduleIntervalValue(p.schedule.intervalValue);
-                        setScheduleEnabled(p.schedule.enabled);
-                      }
-                    }}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm ${schedulePixelId === p.id ? "bg-accent-primary/30" : "bg-dark-bg border border-dark-border hover:border-gray-500"}`}
-                  >
-                    <Clock className="w-4 h-4" />
-                    Schedule
-                  </button>
-                </div>
-                {schedulePixelId === p.id && (
-                  <div className="bg-dark-bg border border-dark-border rounded p-3 flex flex-wrap items-center gap-3">
-                    <span className="text-gray-400 text-sm">Every</span>
-                    <input
-                      type="number"
-                      min={1}
-                      value={scheduleIntervalValue}
-                      onChange={(e) => setScheduleIntervalValue(Number(e.target.value) || 1)}
-                      className="w-16 px-2 py-1 bg-dark-secondary border border-dark-border rounded text-white text-sm"
-                    />
-                    <select
-                      value={scheduleIntervalType}
-                      onChange={(e) => setScheduleIntervalType(e.target.value as "minutes" | "hours" | "days")}
-                      className="px-2 py-1 bg-dark-secondary border border-dark-border rounded text-white text-sm"
-                    >
-                      <option value="minutes">minutes</option>
-                      <option value="hours">hours</option>
-                      <option value="days">days</option>
-                    </select>
-                    <label className="flex items-center gap-2 text-gray-400 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={scheduleEnabled}
-                        onChange={(e) => setScheduleEnabled(e.target.checked)}
-                      />
-                      Enabled
-                    </label>
-                    <button
-                      onClick={() => saveSchedule(p.id)}
-                      disabled={savingSchedule}
-                      className="px-3 py-1 bg-accent-primary text-white rounded text-sm hover:opacity-90 disabled:opacity-50"
-                    >
-                      {savingSchedule ? "Saving…" : "Save"}
-                    </button>
-                    {p.schedule && (
-                      <button
-                        onClick={() => deleteSchedule(p.id)}
-                        className="px-3 py-1 text-red-400 text-sm hover:underline"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                )}
-                {p.schedule && schedulePixelId !== p.id && (
-                  <div className="flex items-center gap-2">
-                    <div className="text-gray-500 text-xs">
-                      Scheduled: every {p.schedule.intervalValue} {p.schedule.intervalType}
-                      {p.schedule.enabled ? "" : " (paused)"}
-                      {p.schedule.lastRunAt && ` · Last: ${new Date(p.schedule.lastRunAt).toLocaleString()}`}
-                      {p.schedule.nextRunAt && ` · Next: ${new Date(p.schedule.nextRunAt).toLocaleString()}`}
-                    </div>
-                    <button
-                      onClick={() => loadScheduleRuns(p.id)}
-                      className={`text-xs px-2 py-1 rounded ${runsPixelId === p.id ? "bg-accent-primary/30" : "text-accent-primary hover:bg-accent-primary/10"}`}
-                    >
-                      {runsPixelId === p.id ? "Hide history" : "Run history"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          {scheduleRuns && runsPixelId && (
-            <div className="mt-4 p-4 bg-dark-bg border border-dark-border rounded-lg">
-              <h4 className="text-white font-medium mb-2">Schedule run history</h4>
-              {scheduleRuns.runs.length === 0 ? (
-                <p className="text-gray-500 text-sm">No runs yet.</p>
-              ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {scheduleRuns.runs.map((r) => (
-                    <div key={r.id} className="flex flex-wrap items-center gap-2 text-sm">
-                      <span className="text-gray-400">
-                        {new Date(r.startedAt).toLocaleString()}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded text-xs ${
-                        r.status === "completed" ? "bg-green-500/20 text-green-400" :
-                        r.status === "failed" ? "bg-red-500/20 text-red-400" :
-                        "bg-gray-500/20 text-gray-400"
-                      }`}>
-                        {r.status}
-                      </span>
-                      {r.status !== "running" && (
-                        <>
-                          <span className="text-gray-500">{r.pagesFetched} pages</span>
-                          <span className="text-gray-500">{r.contactsUpserted} contacts</span>
-                          {r.error && <span className="text-red-400 truncate max-w-[200px]" title={r.error}>{r.error}</span>}
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          {pixels.length === 0 && !showPixelForm && (
-            <p className="text-gray-500 text-sm">No pixels yet. Create one to get started.</p>
-          )}
-        </div>
-      </section>
-
       {/* Campaigns section */}
       <section>
         <button
@@ -686,21 +465,7 @@ export default function ReactivatePage() {
         </p>
 
         {campaignsOpen && (
-          <div className="space-y-8 pl-4 border-l-2 border-dark-border">
-            {/* Webhook URL */}
-            {webhookId && (
-              <div>
-                <h3 className="text-white font-medium mb-2 flex items-center gap-2">
-                  <Mail className="w-4 h-4" /> Webhook URL
-                </h3>
-                <code className="block p-3 bg-dark-bg rounded text-sm text-gray-300 break-all">
-                  {typeof window !== "undefined"
-                    ? `${window.location.origin}${API_BASE}/webhooks/leads/${webhookId}`
-                    : `.../webhooks/leads/${webhookId}`}
-                </code>
-              </div>
-            )}
-
+          <div className="space-y-8">
             <div>
               <h3 className="text-white font-medium mb-2">1. Create a new campaign</h3>
               <p className="text-gray-400 text-sm mb-3">
@@ -716,7 +481,7 @@ export default function ReactivatePage() {
                   <Plus className="w-4 h-4" /> New Campaign
                 </button>
               ) : (
-                <div className="bg-dark-secondary border border-dark-border rounded-lg p-4 space-y-3 max-w-lg mb-4">
+                <div className="bg-dark-secondary border border-dark-border rounded-lg p-4 space-y-3 max-w-2xl mb-4">
                   <div>
                     <label className="text-gray-400 text-sm block mb-1">Segment</label>
                     <select
@@ -788,12 +553,6 @@ export default function ReactivatePage() {
                       )}
                     </div>
                   </div>
-                  <input
-                    placeholder="Subject line"
-                    value={campaignSubject}
-                    onChange={(e) => setCampaignSubject(e.target.value)}
-                    className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white"
-                  />
                   <div>
                     <label className="text-gray-400 text-sm block mb-1">Email field</label>
                     <select

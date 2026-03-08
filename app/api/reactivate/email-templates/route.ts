@@ -31,6 +31,9 @@ export async function POST(request: NextRequest) {
     query_hint,
     cta_url,
     cta_label,
+    variable_mappings,
+    recovery_type,
+    slot_defaults,
     enabled,
   } = body;
 
@@ -56,6 +59,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const variableMappings =
+    variable_mappings && typeof variable_mappings === "object" && !Array.isArray(variable_mappings)
+      ? variable_mappings
+      : {};
+
+  const recoveryType = ["reminder", "product_interest", "social_proof", "objection_handling", "survey_qualification"].includes(
+    recovery_type?.trim()
+  )
+    ? recovery_type.trim()
+    : "product_interest";
+
+  const slotDefaults =
+    slot_defaults && typeof slot_defaults === "object" && !Array.isArray(slot_defaults)
+      ? slot_defaults
+      : {};
+
   const template = await prisma.rtEmailTemplate.create({
     data: {
       accountId,
@@ -67,6 +86,9 @@ export async function POST(request: NextRequest) {
       queryHint: query_hint?.trim() || null,
       ctaUrl: cta_url?.trim() || null,
       ctaLabel: cta_label?.trim() || null,
+      variableMappings,
+      recoveryType,
+      slotDefaults,
       enabled: !!enabled,
     },
     include: { knowledgeBank: { select: { id: true, name: true } } },

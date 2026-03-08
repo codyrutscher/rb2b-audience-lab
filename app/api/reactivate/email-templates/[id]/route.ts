@@ -47,6 +47,9 @@ export async function PUT(
     query_hint,
     cta_url,
     cta_label,
+    variable_mappings,
+    recovery_type,
+    slot_defaults,
     enabled,
   } = body;
 
@@ -65,6 +68,26 @@ export async function PUT(
     );
   }
 
+  const variableMappings =
+    variable_mappings !== undefined
+      ? (variable_mappings && typeof variable_mappings === "object" && !Array.isArray(variable_mappings)
+          ? variable_mappings
+          : {})
+      : undefined;
+
+  const validRecoveryTypes = ["reminder", "product_interest", "social_proof", "objection_handling", "survey_qualification"];
+  const recoveryType =
+    recovery_type !== undefined && validRecoveryTypes.includes(recovery_type?.trim())
+      ? recovery_type.trim()
+      : undefined;
+
+  const slotDefaults =
+    slot_defaults !== undefined
+      ? (slot_defaults && typeof slot_defaults === "object" && !Array.isArray(slot_defaults)
+          ? slot_defaults
+          : {})
+      : undefined;
+
   const template = await prisma.rtEmailTemplate.update({
     where: { id },
     data: {
@@ -76,6 +99,9 @@ export async function PUT(
       ...(query_hint !== undefined && { queryHint: query_hint?.trim() || null }),
       ...(cta_url !== undefined && { ctaUrl: cta_url?.trim() || null }),
       ...(cta_label !== undefined && { ctaLabel: cta_label?.trim() || null }),
+      ...(variableMappings !== undefined && { variableMappings }),
+      ...(recoveryType !== undefined && { recoveryType }),
+      ...(slotDefaults !== undefined && { slotDefaults }),
       ...(typeof enabled === "boolean" && { enabled }),
     },
     include: { knowledgeBank: { select: { id: true, name: true } } },
