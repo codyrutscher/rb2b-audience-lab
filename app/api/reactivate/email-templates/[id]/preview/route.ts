@@ -3,6 +3,9 @@ import { getAccountIdFromRequest } from "@/lib/reactivate/auth";
 import { generateCopy } from "@/lib/reactivate/copyGeneration";
 import { retrieveChunks } from "@/lib/reactivate/retrieval";
 import { renderTemplate, type TemplateId } from "@/lib/reactivate/templates";
+import { compileRecipe } from "@/lib/reactivate/templates/compiler";
+import { templateSlotsToEmailSlots } from "@/lib/reactivate/templates/slotsBridge";
+import { isValidRecoveryType } from "@/lib/reactivate/recipes";
 import { prisma } from "@/lib/reactivate/db";
 
 /**
@@ -55,13 +58,34 @@ export async function POST(
     "http://localhost:3000";
   const unsubscribeUrl = `${base.replace(/\/$/, "")}/api/reactivate/unsubscribe?email=preview@example.com&account=${encodeURIComponent(accountId)}`;
 
-  const html = renderTemplate(template.templateId as TemplateId, {
+  const slots = {
     first_name: "there",
     personalized_content: copy,
     cta_url: template.ctaUrl || "https://example.com",
     cta_label: template.ctaLabel || "Learn more",
     unsubscribe_url: unsubscribeUrl,
-  });
+  };
+
+  let html: string;
+  const recoveryType = template.recoveryType;
+  if (recoveryType && isValidRecoveryType(recoveryType)) {
+    const slotDefaults = template.slotDefaults as Record<string, unknown> | null;
+    const emailSlots = templateSlotsToEmailSlots(
+      slots,
+      {
+        subject: template.subjectTemplate,
+        preheader: template.subjectTemplate,
+        body: copy,
+        cta_text: template.ctaLabel || "Learn more",
+        cta_url: template.ctaUrl || "https://example.com",
+        unsubscribe_url: unsubscribeUrl,
+      },
+      slotDefaults
+    );
+    html = compileRecipe(recoveryType, emailSlots);
+  } else {
+    html = renderTemplate(template.templateId as TemplateId, slots);
+  }
 
   return NextResponse.json({
     copy,

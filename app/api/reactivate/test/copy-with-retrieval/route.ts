@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     query_hint,
     custom_prompt,
     top_k,
+    extra_variables,
   } = body;
   const knowledgeBankId =
     typeof knowledge_bank_id === "string" ? knowledge_bank_id.trim() : "";
@@ -35,26 +36,46 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Knowledge bank not found" }, { status: 404 });
   }
   try {
-    const chunks = await retrieveChunks({
-      accountId,
-      knowledgeBankId,
-      queryText: query,
-      topK: typeof top_k === "number" ? top_k : 8,
-    });
+    let chunks: { id: string; text: string; score?: number }[];
+    try {
+      chunks = await retrieveChunks({
+        accountId,
+        knowledgeBankId,
+        queryText: query,
+        topK: typeof top_k === "number" ? top_k : 8,
+      });
+    } catch (retrievalErr) {
+      const msg = retrievalErr instanceof Error ? retrievalErr.message : String(retrievalErr);
+      console.error("[copy-with-retrieval] retrieval failed:", msg);
+      throw new Error(`Retrieval failed: ${msg}`);
+    }
     const retrievedText =
       chunks.length > 0
         ? chunks.map((c) => c.text).join("\n\n")
         : bank.description || "No relevant content found.";
-    const copy = await generateCopy({
-      retrievedText,
-      firstName: first_name ?? null,
-      ctaLabel: cta_label ?? null,
-      queryHint: query_hint ?? null,
-      customPrompt: custom_prompt ?? null,
-      maxNewTokens: 350,
-    });
+    const extraVariables =
+      extra_variables && typeof extra_variables === "object" && !Array.isArray(extra_variables)
+        ? extra_variables
+        : undefined;
+    let copy: string;
+    try {
+      copy = await generateCopy({
+        retrievedText,
+        firstName: first_name ?? null,
+        ctaLabel: cta_label ?? null,
+        queryHint: query_hint ?? null,
+        customPrompt: custom_prompt ?? null,
+        extraVariables,
+        maxNewTokens: 350,
+      });
+    } catch (genErr) {
+      const msg = genErr instanceof Error ? genErr.message : String(genErr);
+      console.error("[copy-with-retrieval] copy generation failed:", msg);
+      throw new Error(`Copy generation failed: ${msg}`);
+    }
     const payload: Record<string, unknown> = {
       retrieved_text: retrievedText,
+      retrieved_preview: retrievedText.slice(0, 400) + (retrievedText.length > 400 ? "…" : ""),
       chunks: chunks.length,
       copy,
     };
@@ -75,6 +96,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(payload);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
+    console.error("[copy-with-retrieval] 500:", message);
     return NextResponse.json(
       { error: "Copy with retrieval failed", detail: message },
       { status: 500 }

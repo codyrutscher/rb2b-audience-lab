@@ -7,6 +7,7 @@ export interface TemplateSlots {
   cta_url: string;
   cta_label: string;
   unsubscribe_url: string;
+  [key: string]: string; // allow extra slots from pixel fields (company_name, job_title, etc.)
 }
 
 function escapeHtml(s: string): string {
@@ -55,6 +56,12 @@ export function renderTemplate(
   html = html.replace(/\{\{cta_url\}\}/g, safe.cta_url);
   html = html.replace(/\{\{cta_label\}\}/g, safe.cta_label);
   html = html.replace(/\{\{unsubscribe_url\}\}/g, safe.unsubscribe_url);
+  // Replace extra slots (company_name, job_title, etc.)
+  for (const [key, val] of Object.entries(slots)) {
+    if (["first_name", "personalized_content", "cta_url", "cta_label", "unsubscribe_url"].includes(key)) continue;
+    const re = new RegExp(`\\{\\{${key}\\}\\}`, "g");
+    html = html.replace(re, escapeHtml(val ?? ""));
+  }
 
   const hasCta = !!(slots.cta_url?.trim());
   html = html.replace(/\{\{#if_cta\}\}([\s\S]*?)\{\{\/if_cta\}\}/g, hasCta ? "$1" : "");

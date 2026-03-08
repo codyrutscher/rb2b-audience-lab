@@ -12,6 +12,23 @@ type KnowledgeBank = {
   _count: { documents: number };
 };
 
+type RecoveryType = "reminder" | "product_interest" | "social_proof" | "objection_handling" | "survey_qualification";
+
+type RecipeMeta = {
+  recovery_type: RecoveryType;
+  description: string;
+  sections: string[];
+};
+
+type SlotDefaults = {
+  logo_url?: string;
+  brand_name?: string;
+  headline?: string;
+  cta_text?: string;
+  cta_url?: string;
+  hero_image_url?: string;
+};
+
 type EmailTemplate = {
   id: string;
   name: string;
@@ -23,7 +40,21 @@ type EmailTemplate = {
   queryHint: string | null;
   ctaUrl: string | null;
   ctaLabel: string | null;
+  variableMappings?: Record<string, string> | null;
+  recoveryType?: string | null;
+  slotDefaults?: SlotDefaults | null;
   enabled: boolean;
+};
+
+type VariableMapping = { varName: string; pixelField: string };
+
+type PresetMeta = { id: string; name: string; description: string; subject: string };
+
+type PresetTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  subject: string;
 };
 
 async function fetchApi(path: string, options: RequestInit = {}) {
@@ -54,6 +85,12 @@ export default function TemplatesPage() {
   const [previewQuery, setPreviewQuery] = useState("");
   const [templateName, setTemplateName] = useState("");
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [pixelFields, setPixelFields] = useState<string[]>([]);
+  const [recipes, setRecipes] = useState<RecipeMeta[]>([]);
+  const [recoveryType, setRecoveryType] = useState<RecoveryType>("product_interest");
+  const [slotDefaults, setSlotDefaults] = useState<SlotDefaults>({});
+  const [variableMappings, setVariableMappings] = useState<VariableMapping[]>([]);
+  const [previewVariableValues, setPreviewVariableValues] = useState<Record<string, string>>({});
   const [previewingTemplateId, setPreviewingTemplateId] = useState<string | null>(null);
   const [templatePreviewResult, setTemplatePreviewResult] = useState<{
     copy?: string;
@@ -65,6 +102,7 @@ export default function TemplatesPage() {
     html?: string;
     chunksUsed?: number;
     retrievalHint?: string;
+    retrievedPreview?: string;
   } | null>(null);
   const [testEmail, setTestEmail] = useState("");
   const [sendingTest, setSendingTest] = useState(false);
@@ -73,6 +111,27 @@ export default function TemplatesPage() {
 
   useEffect(() => {
     loadAll();
+  }, []);
+  useEffect(() => {
+    fetch(`${API_BASE}/segment-fields`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.fields && setPixelFields(d.fields))
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    fetch(`${API_BASE}/recipe-metadata`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.recipes && setRecipes(d.recipes))
+      .catch(() => {});
+  }, []);
+  const [presets, setPresets] = useState<{ id: string; name: string; description: string; subject: string }[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>("browse_reminder");
+  const [manualBody, setManualBody] = useState("");
+  useEffect(() => {
+    fetch(`${API_BASE}/preset-templates`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.presets && setPresets(d.presets))
+      .catch(() => {});
   }, []);
 
   async function loadAll() {
@@ -136,36 +195,72 @@ export default function TemplatesPage() {
     setUploadingDoc("");
   }
 
+  function buildExtraVariables(): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const { varName, pixelField } of variableMappings) {
+      if (!varName?.trim()) continue;
+      out[varName.trim()] = previewVariableValues[varName] ?? "Sample";
+    }
+    return out;
+  }
   async function generatePreview() {
-    if (!selectedKbId || !previewQuery.trim()) {
-      setError("Select a knowledge base and enter a query.");
+    if (!selectedPresetId) {
+      setError("Choose a template first.");
       return;
     }
     setError(null);
     setPreviewResult(null);
     try {
-      const copyRes = await fetchApi("/test/copy-with-retrieval", {
-        method: "POST",
-        body: JSON.stringify({
-          knowledge_bank_id: selectedKbId,
-          query: previewQuery.trim(),
-          custom_prompt: customPrompt.trim() || null,
-        }),
-      });
+      let bodyContent = manualBody.trim();
+      let chunksUsed: number | undefined;
+      let retrievalHint: string | undefined;
+      let retrievedPreview: string | undefined;
+
+      if (selectedKbId && previewQuery.trim()) {
+        try {
+          const extraVars = buildExtraVariables();
+          const copyRes = await fetchApi("/test/copy-with-retrieval", {
+            method: "POST",
+            body: JSON.stringify({
+              knowledge_bank_id: selectedKbId,
+              query: previewQuery.trim(),
+              custom_prompt: customPrompt.trim() || null,
+              first_name: "there",
+              extra_variables: Object.keys(extraVars).length > 0 ? extraVars : undefined,
+            }),
+          });
+          bodyContent = copyRes.copy || bodyContent;
+          chunksUsed = copyRes.chunks;
+          retrievalHint = copyRes.retrieval_hint;
+          retrievedPreview = copyRes.retrieved_preview;
+        } catch {
+          // use manual body if retrieval fails
+        }
+      }
+      if (!bodyContent) bodyContent = "Add your message here, or select a knowledge base and enter a query to generate with AI.";
+
+      const slotDefaultsForPreview = Object.fromEntries(
+        Object.entries(slotDefaults).filter(([, v]) => v != null && String(v).trim() !== "")
+      );
       const htmlRes = await fetchApi("/test/template-preview", {
         method: "POST",
         body: JSON.stringify({
+          preset_id: selectedPresetId,
+          slot_defaults: Object.keys(slotDefaultsForPreview).length > 0 ? slotDefaultsForPreview : undefined,
           first_name: "there",
-          personalized_content: copyRes.copy || "Sample content.",
-          cta_url: "https://example.com",
-          cta_label: "Back to site",
+          personalized_content: bodyContent,
+          cta_url: slotDefaults.cta_url || "https://example.com",
+          cta_label: slotDefaults.cta_text || "Back to site",
+          headline: slotDefaults.headline || subjectTemplate,
+          brand_name: slotDefaults.brand_name,
         }),
       });
       setPreviewResult({
-        copy: copyRes.copy,
+        copy: bodyContent,
         html: htmlRes.html,
-        chunksUsed: copyRes.chunks,
-        retrievalHint: copyRes.retrieval_hint,
+        chunksUsed,
+        retrievalHint,
+        retrievedPreview,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Preview failed");
@@ -218,6 +313,15 @@ export default function TemplatesPage() {
     setError(null);
     setSavingTemplate(true);
     try {
+      const varMap: Record<string, string> = {};
+      for (const { varName, pixelField } of variableMappings) {
+        if (varName?.trim() && pixelField?.trim()) varMap[varName.trim()] = pixelField;
+      }
+      const slotDefaultsToSave = Object.fromEntries(
+        Object.entries(slotDefaults).filter(([, v]) => v != null && String(v).trim() !== "")
+      ) as SlotDefaults;
+      const ctaUrl = slotDefaults.cta_url?.trim() || "https://example.com";
+      const ctaLabel = slotDefaults.cta_text?.trim() || "Back to site";
       await fetchApi("/email-templates", {
         method: "POST",
         body: JSON.stringify({
@@ -227,8 +331,11 @@ export default function TemplatesPage() {
           subject_template: subjectTemplate.trim() || "We have something for you",
           template_id: "minimal_recovery",
           query_hint: previewQuery.trim(),
-          cta_url: "https://example.com",
-          cta_label: "Back to site",
+          cta_url: ctaUrl,
+          cta_label: ctaLabel,
+          recovery_type: recoveryType,
+          slot_defaults: Object.keys(slotDefaultsToSave).length > 0 ? slotDefaultsToSave : undefined,
+          variable_mappings: Object.keys(varMap).length > 0 ? varMap : undefined,
         }),
       });
       setTemplateName("");
@@ -277,6 +384,53 @@ export default function TemplatesPage() {
     setCustomPrompt(t.copyPrompt || "");
     setSubjectTemplate(t.subjectTemplate || "We have something for you");
     setPreviewQuery(t.queryHint || "");
+    const valid: RecoveryType[] = ["reminder", "product_interest", "social_proof", "objection_handling", "survey_qualification"];
+    if (t.recoveryType && valid.includes(t.recoveryType as RecoveryType)) {
+      setRecoveryType(t.recoveryType as RecoveryType);
+    } else {
+      setRecoveryType("product_interest");
+    }
+    const sd = t.slotDefaults as SlotDefaults | null;
+    if (sd && typeof sd === "object") {
+      setSlotDefaults({
+        logo_url: sd.logo_url ?? "",
+        brand_name: sd.brand_name ?? "",
+        headline: sd.headline ?? "",
+        cta_text: sd.cta_text ?? t.ctaLabel ?? "",
+        cta_url: sd.cta_url ?? t.ctaUrl ?? "",
+        hero_image_url: sd.hero_image_url ?? "",
+      });
+    } else {
+      setSlotDefaults({
+        logo_url: "",
+        brand_name: "",
+        headline: "",
+        cta_text: t.ctaLabel ?? "",
+        cta_url: t.ctaUrl ?? "",
+        hero_image_url: "",
+      });
+    }
+    const vm = t.variableMappings;
+    if (vm && typeof vm === "object") {
+      setVariableMappings(
+        Object.entries(vm).map(([varName, pixelField]) => ({ varName, pixelField }))
+      );
+    } else {
+      setVariableMappings([]);
+    }
+  }
+  function addVariableMapping() {
+    setVariableMappings((prev) => [...prev, { varName: "", pixelField: pixelFields[0] || "" }]);
+  }
+  function updateVariableMapping(index: number, field: "varName" | "pixelField", value: string) {
+    setVariableMappings((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  }
+  function removeVariableMapping(index: number) {
+    setVariableMappings((prev) => prev.filter((_, i) => i !== index));
   }
 
   if (loading) {
@@ -372,7 +526,108 @@ export default function TemplatesPage() {
           <h2 className="text-xl font-semibold text-white mb-3 flex items-center gap-2">
             <FileText className="w-5 h-5" /> Generate Copy & Preview Email
           </h2>
+
+          {/* Choose a preset template */}
+          <div className="mb-6 p-4 bg-dark-secondary border border-dark-border rounded-lg">
+            <h3 className="text-white font-medium mb-2">Choose a template</h3>
+            <p className="text-gray-400 text-sm mb-3">
+              Pick a high-converting template, then add your message (or generate with AI from your knowledge base).
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { id: "browse_reminder", name: "Browse Reminder", description: "Gentle nudge for visitors who left without converting.", subject: "You left something behind" },
+                { id: "product_interest", name: "Product Interest", description: "For visitors who viewed products or features.", subject: "Still thinking it over?" },
+                { id: "reengagement", name: "Re-engagement", description: "Win back inactive users.", subject: "We miss you" },
+              ].map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => { setSelectedPresetId(p.id); setSubjectTemplate(p.subject); }}
+                  className={`flex flex-col rounded-lg border text-left transition overflow-hidden ${selectedPresetId === p.id ? "border-accent-primary bg-accent-primary/10 ring-1 ring-accent-primary" : "border-dark-border hover:border-gray-500"}`}
+                >
+                  <div className="w-full h-32 bg-white overflow-hidden relative shrink-0">
+                    <iframe
+                      src={`${API_BASE}/preset-templates/${p.id}/preview`}
+                      title={`${p.name} preview`}
+                      className="absolute top-0 left-0 w-[600px] h-[400px] origin-top-left pointer-events-none"
+                      style={{ transform: "scale(0.27)" }}
+                    />
+                  </div>
+                  <div className="p-3">
+                    <span className="text-white font-medium block">{p.name}</span>
+                    <span className="text-gray-400 text-sm line-clamp-2">{p.description}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Customize */}
+          <div className="mb-6 p-4 bg-dark-secondary border border-dark-border rounded-lg">
+            <h3 className="text-white font-medium mb-2">Customize</h3>
+            <p className="text-gray-400 text-sm mb-3">
+              Set logo, brand name, headline, CTA, and optional hero image. These are template settings (not from the knowledge base) and appear in every email using this template.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl">
+              <div>
+                <label className="text-gray-400 text-xs block mb-1">Logo URL</label>
+                <input
+                  placeholder="https://..."
+                  value={slotDefaults.logo_url ?? ""}
+                  onChange={(e) => setSlotDefaults((p) => ({ ...p, logo_url: e.target.value }))}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs block mb-1">Brand name</label>
+                <input
+                  placeholder="Your Company"
+                  value={slotDefaults.brand_name ?? ""}
+                  onChange={(e) => setSlotDefaults((p) => ({ ...p, brand_name: e.target.value }))}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-gray-400 text-xs block mb-1">Headline</label>
+                <input
+                  placeholder="We have something for you"
+                  value={slotDefaults.headline ?? ""}
+                  onChange={(e) => setSlotDefaults((p) => ({ ...p, headline: e.target.value }))}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs block mb-1">CTA text</label>
+                <input
+                  placeholder="Learn more"
+                  value={slotDefaults.cta_text ?? ""}
+                  onChange={(e) => setSlotDefaults((p) => ({ ...p, cta_text: e.target.value }))}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs block mb-1">CTA URL</label>
+                <input
+                  placeholder="https://example.com"
+                  value={slotDefaults.cta_url ?? ""}
+                  onChange={(e) => setSlotDefaults((p) => ({ ...p, cta_url: e.target.value }))}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-gray-400 text-xs block mb-1">Hero image URL (optional)</label>
+                <input
+                  placeholder="https://..."
+                  value={slotDefaults.hero_image_url ?? ""}
+                  onChange={(e) => setSlotDefaults((p) => ({ ...p, hero_image_url: e.target.value }))}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-3 max-w-lg">
+            <p className="text-gray-400 text-sm font-medium">Content & knowledge base</p>
             <select
               value={selectedKbId}
               onChange={(e) => setSelectedKbId(e.target.value)}
@@ -396,12 +651,60 @@ export default function TemplatesPage() {
               className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500"
             />
             <textarea
-              placeholder="Custom prompt (optional). Use {{context}}, {{first_name}}, {{query_hint}}, {{cta_label}}"
+              placeholder="Custom prompt (optional). Use {{context}}, {{first_name}}, {{query_hint}}, {{cta_label}}, or add variables below like {{company_name}}, {{job_title}}"
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
               rows={3}
               className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500"
             />
+            <div className="space-y-2">
+              <p className="text-gray-400 text-sm font-medium">Template variables (from pixel/contact fields)</p>
+              <p className="text-gray-500 text-xs">Map variables for use in your custom prompt, e.g. <code className="text-accent-primary">{`{{company_name}}`}</code> pulls from COMPANY_NAME.</p>
+              {variableMappings.map((m, i) => (
+                <div key={i} className="flex flex-wrap gap-2 items-center">
+                  <span className="text-gray-500 text-sm">{`{{`}</span>
+                  <input
+                    placeholder="variable_name"
+                    value={m.varName}
+                    onChange={(e) => updateVariableMapping(i, "varName", e.target.value)}
+                    className="w-28 px-2 py-1.5 bg-dark-bg border border-dark-border rounded text-white text-sm placeholder-gray-500"
+                  />
+                  <span className="text-gray-500 text-sm">{`}}`}</span>
+                  <span className="text-gray-500">←</span>
+                  <select
+                    value={m.pixelField}
+                    onChange={(e) => updateVariableMapping(i, "pixelField", e.target.value)}
+                    className="px-2 py-1.5 bg-dark-bg border border-dark-border rounded text-white text-sm min-w-[140px]"
+                  >
+                    {pixelFields.map((f) => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                  <input
+                    placeholder="Preview value"
+                    value={previewVariableValues[m.varName] ?? ""}
+                    onChange={(e) => setPreviewVariableValues((prev) => ({ ...prev, [m.varName]: e.target.value }))}
+                    className="w-24 px-2 py-1.5 bg-dark-bg border border-dark-border rounded text-white text-sm placeholder-gray-500"
+                    title="Sample value for preview"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeVariableMapping(i)}
+                    className="text-red-400 hover:text-red-300 text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addVariableMapping}
+                disabled={!pixelFields.length}
+                className="text-sm text-accent-primary hover:underline disabled:text-gray-500 disabled:no-underline"
+              >
+                + Add variable
+              </button>
+            </div>
             <button
               onClick={generatePreview}
               className="px-4 py-2 bg-accent-primary text-white rounded hover:opacity-90"
@@ -424,6 +727,14 @@ export default function TemplatesPage() {
                 </div>
                 {previewResult.retrievalHint && (
                   <p className="text-xs text-amber-500/90">{previewResult.retrievalHint}</p>
+                )}
+                {previewResult.retrievedPreview && (
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-gray-500 hover:text-gray-400">Context passed to LLM</summary>
+                    <pre className="mt-1 p-2 bg-dark-bg rounded text-gray-400 overflow-x-auto whitespace-pre-wrap break-words max-h-32 overflow-y-auto">
+                      {previewResult.retrievedPreview}
+                    </pre>
+                  </details>
                 )}
                 {previewResult.copy && (
                   <div className="p-3 bg-dark-bg rounded">
@@ -499,6 +810,11 @@ export default function TemplatesPage() {
               >
                 <div>
                   <span className="text-white font-medium">{t.name}</span>
+                  {t.recoveryType && (
+                    <span className="text-xs px-2 py-0.5 bg-dark-bg rounded text-gray-400 ml-2">
+                      {t.recoveryType.replace(/_/g, " ")}
+                    </span>
+                  )}
                   <span className="text-gray-500 text-sm ml-2">{t.knowledgeBank.name}</span>
                   <span className="text-gray-500 text-sm ml-2">· {t.subjectTemplate}</span>
                 </div>
