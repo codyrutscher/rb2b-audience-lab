@@ -2,25 +2,26 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { 
-  Eye, 
-  LayoutDashboard, 
-  Activity, 
-  BarChart3, 
-  Filter, 
-  Bell, 
-  Users, 
+import { useEffect, useState } from "react";
+import {
+  Eye,
+  LayoutDashboard,
+  Activity,
+  BarChart3,
+  Filter,
+  Bell,
+  Users,
   UserCircle2,
-  Key, 
-  Settings, 
+  Key,
+  Settings,
   Code,
   LogOut,
   Sparkles,
   Mail,
-  FileText
+  FileText,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { useState } from "react";
+import { getCurrentUser } from "@/lib/supabase-auth";
 
 type NavItem = {
   href: string;
@@ -47,11 +48,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    getCurrentUser().then((user) => {
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+      setAuthChecked(true);
+    });
+  }, [router]);
 
   async function handleLogout() {
     setLoggingOut(true);
     await supabase.auth.signOut();
     router.push('/login');
+  }
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-dark-bg flex items-center justify-center">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    );
   }
 
   return (
