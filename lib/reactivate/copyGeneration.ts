@@ -83,6 +83,13 @@ export async function generateCopy(input: CopyGenerationInput): Promise<string> 
 
   if (!res.ok) {
     const err = await res.text();
+    if (res.status === 400 && /model_not_supported|not supported by any provider/i.test(err)) {
+      const model = getModel();
+      throw new Error(
+        `Copy generation model "${model}" is not supported by any Hugging Face provider you have enabled. ` +
+          "Set COPY_GENERATION_MODEL in .env to a supported model (e.g. mistralai/Mistral-7B-Instruct-v0.2 or Qwen/Qwen2.5-7B-Instruct) or enable a provider at https://huggingface.co/settings."
+      );
+    }
     throw new Error(`Hugging Face text generation error ${res.status}: ${err}`);
   }
 

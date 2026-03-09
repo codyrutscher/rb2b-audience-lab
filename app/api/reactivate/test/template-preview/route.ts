@@ -3,6 +3,10 @@ import { getAccountIdFromRequest } from "@/lib/reactivate/auth";
 import { renderTemplate, TEMPLATE_IDS, type TemplateId } from "@/lib/reactivate/templates";
 import { templateSlotsToEmailSlots } from "@/lib/reactivate/templates/slotsBridge";
 import { isValidRecoveryType } from "@/lib/reactivate/recipes";
+import {
+  PRESET_IDS,
+  PRESET_PREVIEW_HTML,
+} from "@/lib/reactivate/templates/preset-previews.generated";
 
 export const dynamic = "force-dynamic";
 
@@ -47,26 +51,11 @@ export async function POST(request: NextRequest) {
     : null;
 
   let html: string;
-  const { compilePreset, isValidPresetId, PRESET_METADATA } = await import(
-    "@/lib/reactivate/templates/presets"
-  );
-  if (preset_id && isValidPresetId(preset_id)) {
-    const bodyContent = slots.personalized_content?.trim() || slots.personalized_content || "";
-    const presetMeta = PRESET_METADATA[preset_id];
-    const emailSlots = {
-      first_name: slots.first_name,
-      body: bodyContent || "Add your message here. You can use AI to generate this from your knowledge base.",
-      cta_text: slots.cta_label,
-      cta_url: slots.cta_url,
-      cta_label: slots.cta_label,
-      unsubscribe_url: unsubscribeUrl,
-      headline: headline?.trim() || presetMeta.subject,
-      brand_name: brand_name?.trim() || "Your Company",
-      subject: presetMeta.subject,
-      logo_url: (slotDefaults?.logo_url ?? "")?.trim() || "",
-      hero_image_url: (slotDefaults?.hero_image_url ?? "")?.trim() || "",
-    };
-    html = compilePreset(preset_id, emailSlots);
+  if (preset_id && PRESET_IDS.includes(preset_id as (typeof PRESET_IDS)[number])) {
+    html = PRESET_PREVIEW_HTML[preset_id] ?? "";
+    if (!html) {
+      return NextResponse.json({ error: "Preset preview not found" }, { status: 404 });
+    }
   } else if (recovery_type && isValidRecoveryType(recovery_type)) {
     const bodyContent = slots.personalized_content?.trim() || slots.personalized_content || "";
     const emailSlots = templateSlotsToEmailSlots(
