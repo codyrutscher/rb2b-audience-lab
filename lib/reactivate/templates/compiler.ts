@@ -1,28 +1,13 @@
-import { spawnSync } from "node:child_process";
-import path from "node:path";
+import mjml from "mjml";
 import type { RecoveryType } from "../recipes";
 import { RECIPE_SECTIONS } from "../recipes";
 import { renderSectionMjml } from "./sections";
 import type { EmailSlots } from "./emailSlots";
 
-/**
- * Compile MJML to HTML via subprocess to avoid uglify-js ENOENT in Next.js RSC.
- * MJML runs in a plain Node process with normal module resolution.
- */
-function mjmlToHtmlViaSubprocess(mjml: string): string {
-  const scriptPath = path.join(process.cwd(), "scripts", "mjml-compile.mjs");
-  const result = spawnSync("node", [scriptPath], {
-    input: mjml,
-    encoding: "utf8",
-    timeout: 10000,
-  });
-  if (result.error) {
-    throw new Error(`MJML subprocess failed: ${result.error.message}`);
-  }
-  if (result.status !== 0) {
-    throw new Error(`MJML subprocess exited ${result.status}: ${result.stderr || result.stdout}`);
-  }
-  return result.stdout.trim();
+/** Compile MJML to HTML in-process so it works on Vercel (no subprocess). */
+function mjmlToHtml(mjmlSource: string): string {
+  const result = mjml(mjmlSource, { validationLevel: "soft", minify: false });
+  return result.html;
 }
 
 /**
@@ -49,5 +34,5 @@ export function compileRecipe(
   </mj-body>
 </mjml>`;
 
-  return mjmlToHtmlViaSubprocess(mjml);
+  return mjmlToHtml(mjml);
 }

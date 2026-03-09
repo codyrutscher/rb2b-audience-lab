@@ -5,7 +5,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import mjml from "mjml";
 import sanitizeHtml from "sanitize-html";
 import type { EmailSlots } from "../emailSlots";
 
@@ -52,20 +52,9 @@ function loadPresetMjml(id: PresetTemplateId): string {
   return fs.readFileSync(filePath, "utf8");
 }
 
-function mjmlToHtml(mjml: string): string {
-  const scriptPath = path.join(process.cwd(), "scripts", "mjml-compile.mjs");
-  const result = spawnSync("node", [scriptPath], {
-    input: mjml,
-    encoding: "utf8",
-    timeout: 10000,
-  });
-  if (result.error) {
-    throw new Error(`MJML subprocess failed: ${result.error.message}`);
-  }
-  if (result.status !== 0) {
-    throw new Error(`MJML subprocess exited ${result.status}: ${result.stderr || result.stdout}`);
-  }
-  return result.stdout.trim();
+function mjmlToHtml(mjmlSource: string): string {
+  const result = mjml(mjmlSource, { validationLevel: "soft", minify: false });
+  return result.html;
 }
 
 function escapeForHtml(s: string): string {
