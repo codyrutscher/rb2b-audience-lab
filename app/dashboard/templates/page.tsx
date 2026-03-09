@@ -242,17 +242,20 @@ export default function TemplatesPage() {
       const slotDefaultsForPreview = Object.fromEntries(
         Object.entries(slotDefaults).filter(([, v]) => v != null && String(v).trim() !== "")
       );
+      const extraVarsForPreview = buildExtraVariables();
+      const firstNameForPreview = extraVarsForPreview.First_Name ?? extraVarsForPreview.first_name ?? "there";
       const htmlRes = await fetchApi("/test/template-preview", {
         method: "POST",
         body: JSON.stringify({
           preset_id: selectedPresetId,
           slot_defaults: Object.keys(slotDefaultsForPreview).length > 0 ? slotDefaultsForPreview : undefined,
-          first_name: "there",
+          first_name: firstNameForPreview,
           personalized_content: bodyContent,
           cta_url: slotDefaults.cta_url || "https://example.com",
           cta_label: slotDefaults.cta_text || "Back to site",
           headline: slotDefaults.headline || subjectTemplate,
           brand_name: slotDefaults.brand_name,
+          variable_values: Object.keys(extraVarsForPreview).length > 0 ? extraVarsForPreview : undefined,
         }),
       });
       setPreviewResult({
@@ -659,7 +662,7 @@ export default function TemplatesPage() {
             />
             <div className="space-y-2">
               <p className="text-gray-400 text-sm font-medium">Template variables (from pixel/contact fields)</p>
-              <p className="text-gray-500 text-xs">Map variables for use in your custom prompt, e.g. <code className="text-accent-primary">{`{{company_name}}`}</code> pulls from COMPANY_NAME.</p>
+              <p className="text-gray-500 text-xs">Map variables for your prompt and template. Use <code className="text-accent-primary">{`{{var_name}}`}</code> or <code className="text-accent-primary">[var_name]</code> in copy. <strong>Preview value</strong> is used when you click Generate &amp; Preview so you can test how the email will look.</p>
               {variableMappings.map((m, i) => (
                 <div key={i} className="flex flex-wrap gap-2 items-center">
                   <span className="text-gray-500 text-sm">{`{{`}</span>

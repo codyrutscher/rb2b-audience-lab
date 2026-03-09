@@ -7,8 +7,36 @@ import {
   PRESET_IDS,
   PRESET_PREVIEW_HTML,
   PRESET_BODY_PLACEHOLDER,
+  PRESET_FIRST_NAME_PLACEHOLDER,
 } from "@/lib/reactivate/templates/preset-previews.generated";
 import sanitizeHtml from "sanitize-html";
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** Replace {{VarName}} and [VarName] in text with values from variable_values (for preview testing). */
+function substituteVariablePlaceholders(
+  text: string,
+  variableValues: Record<string, string> | null | undefined,
+  firstName?: string
+): string {
+  let out = text;
+  if (variableValues && typeof variableValues === "object") {
+    for (const [key, val] of Object.entries(variableValues)) {
+      if (!key || val == null) continue;
+      const escaped = escapeRegex(key);
+      const re1 = new RegExp(`\\{\\{\\s*${escaped}\\s*\\}\\}`, "gi");
+      const re2 = new RegExp(`\\[\\s*${escaped}\\s*\\]`, "gi");
+      out = out.replace(re1, val).replace(re2, val);
+    }
+  }
+  const nameVal = firstName ?? variableValues?.First_Name ?? variableValues?.first_name ?? "";
+  if (nameVal) {
+    out = out.replace(/\{\{\s*Reader's Name\s*\}\}/gi, nameVal).replace(/\[\s*Reader's Name\s*\]/gi, nameVal);
+  }
+  return out;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +58,7 @@ export async function POST(request: NextRequest) {
     cta_label,
     headline,
     brand_name,
+    variable_values,
   } = body;
 
   const base =
@@ -38,8 +67,9 @@ export async function POST(request: NextRequest) {
     "http://localhost:3000";
   const unsubscribeUrl = `${base.replace(/\/$/, "")}/api/reactivate/unsubscribe?email=preview@example.com&account=${encodeURIComponent(accountId)}`;
 
+  const firstName = first_name?.trim() || "there";
   const slots = {
-    first_name: first_name?.trim() || "there",
+    first_name: firstName,
     personalized_content:
       personalized_content?.trim() ||
       "This is sample content. In real emails, this comes from the LLM based on retrieved knowledge.",
@@ -58,7 +88,8 @@ export async function POST(request: NextRequest) {
     if (!html) {
       return NextResponse.json({ error: "Preset preview not found" }, { status: 404 });
     }
-    const bodyContent = (personalized_content ?? slots.personalized_content ?? "").toString().trim();
+    let bodyContent = (personalized_content ?? slots.personalized_content ?? "").toString().trim();
+    bodyContent = substituteVariablePlaceholders(bodyContent, variable_values, firstName);
     if (bodyContent) {
       const safeBody = sanitizeHtml(bodyContent.replace(/\n/g, "<br/>"), {
         allowedTags: ["p", "br", "strong", "b", "em", "i", "u", "a", "ul", "ol", "li"],
@@ -67,8 +98,10 @@ export async function POST(request: NextRequest) {
       });
       html = html.split(PRESET_BODY_PLACEHOLDER).join(safeBody);
     }
+    html = html.split(PRESET_FIRST_NAME_PLACEHOLDER).join(firstName);
   } else if (recovery_type && isValidRecoveryType(recovery_type)) {
-    const bodyContent = slots.personalized_content?.trim() || slots.personalized_content || "";
+    let bodyContent = slots.personalized_content?.trim() || slots.personalized_content || "";
+    bodyContent = substituteVariablePlaceholders(bodyContent, variable_values, firstName);
     const emailSlots = templateSlotsToEmailSlots(
       slots,
       {

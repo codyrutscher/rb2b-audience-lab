@@ -154,7 +154,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.6;text-align:left;color:#374151;"
-      >Hi there,</div>
+      >Hi %%%FIRST_NAME%%%,</div>
     
                 </td>
               </tr>
@@ -402,7 +402,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.6;text-align:left;color:#374151;"
-      >Hi there,</div>
+      >Hi %%%FIRST_NAME%%%,</div>
     
                 </td>
               </tr>
@@ -686,7 +686,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.6;text-align:left;color:#374151;"
-      >Hi there,</div>
+      >Hi %%%FIRST_NAME%%%,</div>
     
                 </td>
               </tr>
@@ -890,3 +890,4 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
 };
 
 export const PRESET_BODY_PLACEHOLDER = "%%%EMAIL_BODY%%%";
+export const PRESET_FIRST_NAME_PLACEHOLDER = "%%%FIRST_NAME%%%";

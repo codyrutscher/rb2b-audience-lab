@@ -39,13 +39,14 @@ function escapeForTsString(s: string): string {
 }
 
 const BODY_PLACEHOLDER = "%%%EMAIL_BODY%%%";
+const FIRST_NAME_PLACEHOLDER = "%%%FIRST_NAME%%%";
 const htmlByPreset: Record<string, string> = {};
 for (const id of PRESET_IDS) {
   const sample = sampleByPreset[id] ?? {
     body: "Your personalized message will appear here.",
   };
   const sampleSlots = {
-    first_name: "there",
+    first_name: FIRST_NAME_PLACEHOLDER,
     body: BODY_PLACEHOLDER,
     subheadline: sample.subheadline ?? "",
     cta_text: "Back to site",
@@ -77,6 +78,7 @@ for (const id of PRESET_IDS) {
 lines.push("};");
 lines.push("");
 lines.push("export const PRESET_BODY_PLACEHOLDER = \"" + BODY_PLACEHOLDER + "\";");
+lines.push("export const PRESET_FIRST_NAME_PLACEHOLDER = \"" + FIRST_NAME_PLACEHOLDER + "\";");
 lines.push("");
 
 fs.mkdirSync(outDir, { recursive: true });
