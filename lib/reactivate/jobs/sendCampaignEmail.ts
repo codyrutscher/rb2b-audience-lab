@@ -7,7 +7,7 @@ import { resolveEmailForSend } from "../emailResolution";
 import { compileRecipe } from "../templates/compiler";
 import { templateSlotsToEmailSlots } from "../templates/slotsBridge";
 import { isValidRecoveryType } from "../recipes";
-import { substituteVariables } from "../substituteVariables";
+import { substituteVariables, stripLeadingGreeting } from "../substituteVariables";
 
 const COOLDOWN_HOURS = 24;
 
@@ -131,9 +131,10 @@ export async function sendCampaignEmailForContact(
   }
 
   const templateId = (campaign.emailTemplate?.templateId ?? campaign.templateId) as TemplateId;
+  const bodyForSlots = stripLeadingGreeting(personalizedContent);
   const slots: TemplateSlots = {
     first_name: contact.firstName?.trim() || (pixelData.FIRST_NAME as string)?.trim() || "there",
-    personalized_content: personalizedContent,
+    personalized_content: bodyForSlots,
     cta_url: ctaUrl?.trim() || "",
     cta_label: ctaLabel?.trim() || "Learn more",
     unsubscribe_url: getUnsubscribeUrl(contact.accountId, toEmail),
@@ -151,7 +152,7 @@ export async function sendCampaignEmailForContact(
           subject: subjectText,
           preheader: subjectText,
           headline: "We have something for you",
-          body: personalizedContent,
+          body: bodyForSlots,
           cta_text: ctaLabel?.trim() || "Learn more",
           cta_url: ctaUrl?.trim() || "",
           unsubscribe_url: getUnsubscribeUrl(contact.accountId, toEmail),

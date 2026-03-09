@@ -42,14 +42,13 @@ export function templateSlotsToEmailSlots(
   slotDefaults?: Record<string, unknown> | null
 ): EmailSlots {
   const firstName = slots.first_name || "there";
-  const body = slots.personalized_content || "";
-  const greeting = body.trim() ? `Hi ${firstName},\n\n${body}` : `Hi ${firstName},`;
+  const body = (slots.personalized_content || "").toString().trim();
 
   const base: EmailSlots = {
     first_name: firstName,
     headline: "We have something for you",
     subheadline: "",
-    body: greeting,
+    body: body || `Hi ${firstName},`,
     cta_text: slots.cta_label || "Learn more",
     cta_url: slots.cta_url || "",
     unsubscribe_url: slots.unsubscribe_url || "#",

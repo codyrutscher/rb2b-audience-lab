@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountIdFromRequest } from "@/lib/reactivate/auth";
+import { stripLeadingGreeting } from "@/lib/reactivate/substituteVariables";
 import { renderTemplate, TEMPLATE_IDS, type TemplateId } from "@/lib/reactivate/templates";
 import { templateSlotsToEmailSlots } from "@/lib/reactivate/templates/slotsBridge";
 import { isValidRecoveryType } from "@/lib/reactivate/recipes";
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Preset preview not found" }, { status: 404 });
     }
     let bodyContent = (personalized_content ?? slots.personalized_content ?? "").toString().trim();
-    bodyContent = substituteVariablePlaceholders(bodyContent, variable_values, firstName);
+    bodyContent = substituteVariablePlaceholders(stripLeadingGreeting(bodyContent), variable_values, firstName);
     if (bodyContent) {
       const safeBody = sanitizeHtml(bodyContent.replace(/\n/g, "<br/>"), SAFE_HTML_OPTS);
       html = html.split(PRESET_BODY_PLACEHOLDER).join(safeBody);
@@ -169,7 +170,7 @@ export async function POST(request: NextRequest) {
     }
   } else if (recovery_type && isValidRecoveryType(recovery_type)) {
     let bodyContent = slots.personalized_content?.trim() || slots.personalized_content || "";
-    bodyContent = substituteVariablePlaceholders(bodyContent, variable_values, firstName);
+    bodyContent = substituteVariablePlaceholders(stripLeadingGreeting(bodyContent), variable_values, firstName);
     const emailSlots = templateSlotsToEmailSlots(
       slots,
       {

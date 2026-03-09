@@ -1,4 +1,11 @@
 /**
+ * Strip a leading "Hi {{First_Name}}, " (or first_name) so the template's own greeting line is not duplicated.
+ */
+export function stripLeadingGreeting(text: string): string {
+  return text.replace(/^\s*Hi\s+\{\{\s*(?:First_Name|first_name)\s*\}\}\s*,?\s*/i, "").trim();
+}
+
+/**
  * Substitute {{VarName}} and [VarName] in text with values from variable_values.
  * Used for subject lines, body copy, and preview.
  */
