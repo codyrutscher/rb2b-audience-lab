@@ -60,9 +60,10 @@ export async function POST(
     "http://localhost:3000";
   const unsubscribeUrl = `${base.replace(/\/$/, "")}/api/reactivate/unsubscribe?email=preview@example.com&account=${encodeURIComponent(accountId)}`;
 
+  const copyText = typeof copy === "string" ? copy : copy.copy;
   const slots = {
     first_name: "there",
-    personalized_content: copy,
+    personalized_content: copyText,
     cta_url: template.ctaUrl || "https://example.com",
     cta_label: template.ctaLabel || "Learn more",
     unsubscribe_url: unsubscribeUrl,
@@ -78,7 +79,7 @@ export async function POST(
       {
         subject: template.subjectTemplate,
         preheader: template.subjectTemplate,
-        body: copy,
+        body: copyText,
         cta_text: template.ctaLabel || "Learn more",
         cta_url: template.ctaUrl || "https://example.com",
         unsubscribe_url: unsubscribeUrl,

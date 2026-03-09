@@ -17,10 +17,10 @@ import {
 import sanitizeHtml from "sanitize-html";
 
 const SAFE_HTML_OPTS = {
-  allowedTags: ["p", "br", "strong", "b", "em", "i", "u", "a", "ul", "ol", "li"],
-  allowedAttributes: { a: ["href", "target", "rel"] },
-  allowedSchemes: ["http", "https", "mailto"],
-} as const;
+  allowedTags: ["p", "br", "strong", "b", "em", "i", "u", "a", "ul", "ol", "li"] as string[],
+  allowedAttributes: { a: ["href", "target", "rel"] as string[] },
+  allowedSchemes: ["http", "https", "mailto"] as string[],
+};
 
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

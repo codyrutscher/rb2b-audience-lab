@@ -114,7 +114,7 @@ export async function sendCampaignEmailForContact(
 
   let personalizedContent: string;
   try {
-    personalizedContent = await generateCopy({
+    const copyResult = await generateCopy({
       retrievedText,
       firstName: contact.firstName,
       ctaLabel: ctaLabel ?? undefined,
@@ -123,6 +123,7 @@ export async function sendCampaignEmailForContact(
       extraVariables: Object.keys(extraVariables).length > 0 ? extraVariables : undefined,
       maxNewTokens: 350,
     });
+    personalizedContent = copyResult.copy;
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     await logSend(contact.accountId, contactId, segmentCampaignId, campaign.templateId, campaign.emailTemplateId, toEmail, null, "failed", msg);

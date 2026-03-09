@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, BookOpen, Upload, FileText, Mail } from "lucide-react";
 
 const API_BASE = "/api/reactivate";
+const UNSUBSCRIBE_EXAMPLE = '<a href="{{unsubscribe_url}}">Unsubscribe</a>';
 
 type KnowledgeBank = {
   id: string;
@@ -710,7 +711,7 @@ export default function TemplatesPage() {
                   className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
                 />
                 <p className="text-gray-500 text-xs mt-1">
-                  Use <code className="text-accent-primary">{`{{unsubscribe_url}}`}</code> inside a link for the unsubscribe link, e.g. <code className="text-gray-400">&lt;a href="{`{{unsubscribe_url}}`}"&gt;Unsubscribe&lt;/a&gt;</code>
+                  Use <code className="text-accent-primary">{`{{unsubscribe_url}}`}</code> inside a link for the unsubscribe link, e.g. <code className="text-gray-400">{UNSUBSCRIBE_EXAMPLE}</code>
                 </p>
               </div>
             </div>

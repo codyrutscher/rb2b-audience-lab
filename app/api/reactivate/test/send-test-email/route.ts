@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       ? subject.trim()
       : "Test email – Reactivate";
   const emailSubject = substituteVariables(subjectRaw, {
-    variable_values: variable_values && typeof variable_values === "object" && !Array.isArray(variable_values) ? variable_values : undefined,
+    variableValues: variable_values && typeof variable_values === "object" && !Array.isArray(variable_values) ? variable_values : undefined,
     firstName: first_name ?? undefined,
   });
 

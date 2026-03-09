@@ -169,18 +169,18 @@ export function parseStructuredCopy(text: string): {
 } {
   const result: { copy: string; headline?: string; subheading?: string; bullets?: string[]; cta?: string; body?: string } = { copy: text.trim() };
   const raw = text.trim();
-  const headlineM = raw.match(/\bHEADLINE:\s*(.+?)(?=\n\w+:|$)/is);
+  const headlineM = raw.match(/\bHEADLINE:\s*([\s\S]+?)(?=\n\w+:|$)/i);
   if (headlineM) result.headline = headlineM[1].trim();
-  const subM = raw.match(/\bSUB_HEADING:\s*(.+?)(?=\n\w+:|$)/is);
+  const subM = raw.match(/\bSUB_HEADING:\s*([\s\S]+?)(?=\n\w+:|$)/i);
   if (subM) result.subheading = subM[1].trim();
   const bulletsM = raw.match(/\bBULLETS:\s*([\s\S]+?)(?=\n(?:CTA|BODY):|$)/i);
   if (bulletsM) {
     const lines = bulletsM[1].split(/\n/).map((l) => l.replace(/^[\s\-*]*/, "").trim()).filter(Boolean);
     if (lines.length) result.bullets = lines;
   }
-  const ctaM = raw.match(/\bCTA:\s*(.+?)(?=\n\w+:|$)/is);
+  const ctaM = raw.match(/\bCTA:\s*([\s\S]+?)(?=\n\w+:|$)/i);
   if (ctaM) result.cta = ctaM[1].trim();
-  const bodyM = raw.match(/\bBODY:\s*([\s\S]+?)$/is);
+  const bodyM = raw.match(/\bBODY:\s*([\s\S]+?)$/i);
   if (bodyM) result.body = bodyM[1].trim();
   return result;
 }

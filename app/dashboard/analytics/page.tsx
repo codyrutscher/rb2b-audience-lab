@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Eye, TrendingUp, Globe, Monitor, Users, BarChart3 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/supabase-auth";
@@ -22,11 +22,7 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('7d');
 
-  useEffect(() => {
-    loadAnalytics();
-  }, [dateRange]);
-
-  async function loadAnalytics() {
+  const loadAnalytics = useCallback(async () => {
     setLoading(true);
     const user = await getCurrentUser();
     if (!user) return;
@@ -130,7 +126,12 @@ export default function AnalyticsPage() {
     }
 
     setLoading(false);
-  }
+  }, [dateRange]);
+
+  useEffect(() => {
+    loadAnalytics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadAnalytics from useCallback(dateRange)
+  }, [loadAnalytics]);
 
   function formatTime(seconds: number): string {
     const mins = Math.floor(seconds / 60);
