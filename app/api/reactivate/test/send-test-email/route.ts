@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAccountIdFromRequest } from "@/lib/reactivate/auth";
 import { renderTemplate, TEMPLATE_IDS, type TemplateId } from "@/lib/reactivate/templates";
 import { sendEmail } from "@/lib/reactivate/resend";
+import { substituteVariables } from "@/lib/reactivate/substituteVariables";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest) {
     cta_url,
     cta_label,
     subject,
+    variable_values,
   } = body;
 
   const toEmail = typeof to === "string" ? to.trim() : "";
@@ -53,10 +55,14 @@ export async function POST(request: NextRequest) {
     unsubscribe_url: unsubscribeUrl,
   });
 
-  const emailSubject =
+  const subjectRaw =
     typeof subject === "string" && subject.trim()
       ? subject.trim()
       : "Test email – Reactivate";
+  const emailSubject = substituteVariables(subjectRaw, {
+    variable_values: variable_values && typeof variable_values === "object" && !Array.isArray(variable_values) ? variable_values : undefined,
+    firstName: first_name ?? undefined,
+  });
 
   try {
     const { messageId, error } = await sendEmail({

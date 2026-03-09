@@ -57,16 +57,16 @@ export async function POST(request: NextRequest) {
       extra_variables && typeof extra_variables === "object" && !Array.isArray(extra_variables)
         ? extra_variables
         : undefined;
-    let copy: string;
+    let result: Awaited<ReturnType<typeof generateCopy>>;
     try {
-      copy = await generateCopy({
+      result = await generateCopy({
         retrievedText,
         firstName: first_name ?? null,
         ctaLabel: cta_label ?? null,
         queryHint: query_hint ?? null,
         customPrompt: custom_prompt ?? null,
         extraVariables,
-        maxNewTokens: 350,
+        maxNewTokens: 500,
       });
     } catch (genErr) {
       const msg = genErr instanceof Error ? genErr.message : String(genErr);
@@ -77,8 +77,13 @@ export async function POST(request: NextRequest) {
       retrieved_text: retrievedText,
       retrieved_preview: retrievedText.slice(0, 400) + (retrievedText.length > 400 ? "…" : ""),
       chunks: chunks.length,
-      copy,
+      copy: result.copy,
     };
+    if (result.headline != null) payload.headline = result.headline;
+    if (result.subheading != null) payload.subheading = result.subheading;
+    if (result.bullets != null) payload.bullets = result.bullets;
+    if (result.cta != null) payload.cta = result.cta;
+    if (result.body != null) payload.body = result.body;
     if (chunks.length === 0) {
       const [chunkCount, docStatuses] = await Promise.all([
         prisma.rtKnowledgeChunk.count({ where: { knowledgeBankId } }),

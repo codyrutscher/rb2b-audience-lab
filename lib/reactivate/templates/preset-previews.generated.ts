@@ -130,26 +130,14 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:22px;font-weight:600;line-height:1.3;text-align:left;color:#111827;"
-      >You left something behind</div>
+      >%%%HEADLINE%%%</div>
     
                 </td>
               </tr>
             
               <tr>
                 <td
-                   align="left" style="font-size:0px;padding:4px 0 20px;word-break:break-word;"
-                >
-                  
-      <div
-         style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:13px;font-style:italic;line-height:1;text-align:left;color:#6b7280;"
-      >A quick nudge — no pressure.</div>
-    
-                </td>
-              </tr>
-            
-              <tr>
-                <td
-                   align="left" style="font-size:0px;padding:0 0 8px;word-break:break-word;"
+                   align="left" style="font-size:0px;padding:16px 0 8px;word-break:break-word;"
                 >
                   
       <div
@@ -161,12 +149,24 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
             
               <tr>
                 <td
-                   align="left" style="font-size:0px;padding:0 0 24px;word-break:break-word;"
+                   align="left" style="font-size:0px;padding:0 0 12px;word-break:break-word;"
                 >
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.6;text-align:left;color:#374151;"
       >%%%EMAIL_BODY%%%</div>
+    
+                </td>
+              </tr>
+            
+              <tr>
+                <td
+                   align="left" style="font-size:0px;padding:0 0 16px;word-break:break-word;"
+                >
+                  
+      <div
+         style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:14px;line-height:1.6;text-align:left;color:#4b5563;"
+      ><ul><li>%%%BULLETS%%%</li></ul></div>
     
                 </td>
               </tr>
@@ -187,7 +187,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
               <a
                  href="https://example.com" style="display:inline-block;background:#6366f1;color:#ffffff;font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:13px;font-weight:normal;line-height:120%;margin:0;text-decoration:none;text-transform:none;padding:10px 25px;mso-padding-alt:0px;border-radius:6px;" target="_blank"
               >
-                Back to site
+                %%%CTA%%%
               </a>
             </td>
           </tr>
@@ -242,7 +242,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.5;text-align:left;color:#6b7280;"
-      >You received this because you visited our site. <a href="https://example.com/unsubscribe" color="#6366f1">Unsubscribe</a> from these emails.</div>
+      >%%%UNSUBSCRIBE_FOOTER%%%</div>
     
                 </td>
               </tr>
@@ -378,7 +378,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:22px;font-weight:600;line-height:1.3;text-align:left;color:#111827;"
-      >Still thinking it over?</div>
+      >%%%HEADLINE%%%</div>
     
                 </td>
               </tr>
@@ -390,7 +390,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:15px;line-height:1.5;text-align:left;color:#4b5563;"
-      >Quick recap of why visitors love this product</div>
+      >%%%SUBHEADING%%%</div>
     
                 </td>
               </tr>
@@ -421,48 +421,12 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
             
               <tr>
                 <td
-                   align="left" style="font-size:0px;padding:0 0 8px;word-break:break-word;"
-                >
-                  
-      <div
-         style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:14px;font-weight:600;line-height:1;text-align:left;color:#111827;"
-      >Why it’s a fit:</div>
-    
-                </td>
-              </tr>
-            
-              <tr>
-                <td
-                   align="left" style="font-size:0px;padding:0 0 8px;word-break:break-word;"
-                >
-                  
-      <div
-         style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:14px;line-height:1.6;text-align:left;color:#4b5563;"
-      >✓ Simple setup &amp; fast onboarding</div>
-    
-                </td>
-              </tr>
-            
-              <tr>
-                <td
-                   align="left" style="font-size:0px;padding:0 0 8px;word-break:break-word;"
-                >
-                  
-      <div
-         style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:14px;line-height:1.6;text-align:left;color:#4b5563;"
-      >✓ Support when you need it</div>
-    
-                </td>
-              </tr>
-            
-              <tr>
-                <td
                    align="left" style="font-size:0px;padding:0 0 20px;word-break:break-word;"
                 >
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:14px;line-height:1.6;text-align:left;color:#4b5563;"
-      >✓ Results you can measure</div>
+      ><ul><li>%%%BULLETS%%%</li></ul></div>
     
                 </td>
               </tr>
@@ -483,7 +447,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
               <a
                  href="https://example.com" style="display:inline-block;background:#6366f1;color:#ffffff;font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:13px;font-weight:normal;line-height:120%;margin:0;text-decoration:none;text-transform:none;padding:10px 25px;mso-padding-alt:0px;border-radius:6px;" target="_blank"
               >
-                Back to site
+                %%%CTA%%%
               </a>
             </td>
           </tr>
@@ -538,7 +502,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.5;text-align:left;color:#6b7280;"
-      >You received this because you visited our site. <a href="https://example.com/unsubscribe" color="#6366f1">Unsubscribe</a> from these emails.</div>
+      >%%%UNSUBSCRIBE_FOOTER%%%</div>
     
                 </td>
               </tr>
@@ -674,7 +638,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:24px;font-weight:600;line-height:1.3;text-align:left;color:#3730a3;"
-      >We miss you</div>
+      >%%%HEADLINE%%%</div>
     
                 </td>
               </tr>
@@ -719,7 +683,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
               <a
                  href="https://example.com" style="display:inline-block;background:#6366f1;color:#ffffff;font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:13px;font-weight:normal;line-height:120%;margin:0;text-decoration:none;text-transform:none;padding:10px 25px;mso-padding-alt:0px;border-radius:6px;" target="_blank"
               >
-                Back to site
+                %%%CTA%%%
               </a>
             </td>
           </tr>
@@ -860,7 +824,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:12px;line-height:1.5;text-align:left;color:#6b7280;"
-      >You received this because you visited our site. <a href="https://example.com/unsubscribe" color="#6366f1">Unsubscribe</a> from these emails.</div>
+      >%%%UNSUBSCRIBE_FOOTER%%%</div>
     
                 </td>
               </tr>
@@ -891,3 +855,8 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
 
 export const PRESET_BODY_PLACEHOLDER = "%%%EMAIL_BODY%%%";
 export const PRESET_FIRST_NAME_PLACEHOLDER = "%%%FIRST_NAME%%%";
+export const PRESET_HEADLINE_PLACEHOLDER = "%%%HEADLINE%%%";
+export const PRESET_SUBHEADING_PLACEHOLDER = "%%%SUBHEADING%%%";
+export const PRESET_CTA_PLACEHOLDER = "%%%CTA%%%";
+export const PRESET_BULLETS_PLACEHOLDER = "%%%BULLETS%%%";
+export const PRESET_UNSUBSCRIBE_FOOTER_PLACEHOLDER = "%%%UNSUBSCRIBE_FOOTER%%%";

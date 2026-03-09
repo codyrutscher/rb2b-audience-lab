@@ -20,13 +20,21 @@ type RecipeMeta = {
   sections: string[];
 };
 
+type ElementStyle = { fontSize?: string; color?: string };
+/** CTA can also set button background colour */
+type CtaStyle = ElementStyle & { backgroundColor?: string };
+type CustomiseStyle = {
+  headline?: ElementStyle;
+  subheading?: ElementStyle;
+  bullet?: ElementStyle;
+  cta?: CtaStyle;
+};
 type SlotDefaults = {
   logo_url?: string;
-  brand_name?: string;
-  headline?: string;
-  cta_text?: string;
   cta_url?: string;
   hero_image_url?: string;
+  unsubscribe_footer?: string;
+  style?: CustomiseStyle;
 };
 
 type EmailTemplate = {
@@ -88,7 +96,7 @@ export default function TemplatesPage() {
   const [pixelFields, setPixelFields] = useState<string[]>([]);
   const [recipes, setRecipes] = useState<RecipeMeta[]>([]);
   const [recoveryType, setRecoveryType] = useState<RecoveryType>("product_interest");
-  const [slotDefaults, setSlotDefaults] = useState<SlotDefaults>({});
+  const [slotDefaults, setSlotDefaults] = useState<SlotDefaults>({ style: {} });
   const [variableMappings, setVariableMappings] = useState<VariableMapping[]>([]);
   const [previewVariableValues, setPreviewVariableValues] = useState<Record<string, string>>({});
   const [previewingTemplateId, setPreviewingTemplateId] = useState<string | null>(null);
@@ -208,40 +216,58 @@ export default function TemplatesPage() {
       setError("Choose a template first.");
       return;
     }
+    if (!selectedKbId || !previewQuery.trim()) {
+      setError("Select a knowledge base and enter a query (e.g. product benefits), then click Generate & Preview to create copy.");
+      return;
+    }
     setError(null);
     setPreviewResult(null);
     try {
-      let bodyContent = manualBody.trim();
+      let bodyContent = "";
       let chunksUsed: number | undefined;
       let retrievalHint: string | undefined;
       let retrievedPreview: string | undefined;
 
-      if (selectedKbId && previewQuery.trim()) {
-        try {
-          const extraVars = buildExtraVariables();
-          const copyRes = await fetchApi("/test/copy-with-retrieval", {
-            method: "POST",
-            body: JSON.stringify({
-              knowledge_bank_id: selectedKbId,
-              query: previewQuery.trim(),
-              custom_prompt: customPrompt.trim() || null,
-              first_name: "there",
-              extra_variables: Object.keys(extraVars).length > 0 ? extraVars : undefined,
-            }),
-          });
-          bodyContent = copyRes.copy || bodyContent;
-          chunksUsed = copyRes.chunks;
-          retrievalHint = copyRes.retrieval_hint;
-          retrievedPreview = copyRes.retrieved_preview;
-        } catch {
-          // use manual body if retrieval fails
-        }
+      let structuredHeadline: string | undefined;
+      let structuredSubheading: string | undefined;
+      let structuredBullets: string[] | undefined;
+      let structuredCta: string | undefined;
+
+      const extraVars = buildExtraVariables();
+      const copyRes = await fetchApi("/test/copy-with-retrieval", {
+        method: "POST",
+        body: JSON.stringify({
+          knowledge_bank_id: selectedKbId,
+          query: previewQuery.trim(),
+          custom_prompt: customPrompt.trim() || null,
+          first_name: "there",
+          extra_variables: Object.keys(extraVars).length > 0 ? extraVars : undefined,
+        }),
+      });
+      const hasStructured = copyRes.headline != null || copyRes.subheading != null || (copyRes.bullets?.length ?? 0) > 0 || copyRes.cta != null;
+      bodyContent = hasStructured
+        ? (copyRes.body?.trim() ?? "We thought you might find this useful.")
+        : (copyRes.body ?? copyRes.copy ?? "");
+      structuredHeadline = copyRes.headline;
+      structuredSubheading = copyRes.subheading;
+      structuredBullets = copyRes.bullets;
+      structuredCta = copyRes.cta;
+      chunksUsed = copyRes.chunks;
+      retrievalHint = copyRes.retrieval_hint;
+      retrievedPreview = copyRes.retrieved_preview;
+
+      if (!bodyContent || !bodyContent.trim()) {
+        setError("No copy was generated. Check the browser console and server logs, and ensure HUGGINGFACE_TOKEN and COPY_GENERATION_MODEL are set in .env.");
+        return;
       }
-      if (!bodyContent) bodyContent = "Add your message here, or select a knowledge base and enter a query to generate with AI.";
 
       const slotDefaultsForPreview = Object.fromEntries(
-        Object.entries(slotDefaults).filter(([, v]) => v != null && String(v).trim() !== "")
-      );
+        Object.entries(slotDefaults).filter(([k, v]) => {
+          if (v == null) return false;
+          if (k === "style") return typeof v === "object" && !Array.isArray(v) && Object.keys(v).length > 0;
+          return String(v).trim() !== "";
+        })
+      ) as SlotDefaults;
       const extraVarsForPreview = buildExtraVariables();
       const firstNameForPreview = extraVarsForPreview.First_Name ?? extraVarsForPreview.first_name ?? "there";
       const htmlRes = await fetchApi("/test/template-preview", {
@@ -252,9 +278,13 @@ export default function TemplatesPage() {
           first_name: firstNameForPreview,
           personalized_content: bodyContent,
           cta_url: slotDefaults.cta_url || "https://example.com",
-          cta_label: slotDefaults.cta_text || "Back to site",
-          headline: slotDefaults.headline || subjectTemplate,
-          brand_name: slotDefaults.brand_name,
+          cta_label: structuredCta ?? "Back to site",
+          headline: structuredHeadline ?? subjectTemplate,
+          subheading: structuredSubheading,
+          bullets: structuredBullets,
+          cta: structuredCta ?? "Back to site",
+          style: slotDefaults.style && Object.keys(slotDefaults.style).length > 0 ? slotDefaults.style : undefined,
+          unsubscribe_footer: slotDefaults.unsubscribe_footer?.trim() || undefined,
           variable_values: Object.keys(extraVarsForPreview).length > 0 ? extraVarsForPreview : undefined,
         }),
       });
@@ -284,15 +314,18 @@ export default function TemplatesPage() {
     setTestEmailSent(false);
     setSendingTest(true);
     try {
+      const extraVars = buildExtraVariables();
+      const firstNameForTest = extraVars.First_Name ?? extraVars.first_name ?? "there";
       await fetchApi("/test/send-test-email", {
         method: "POST",
         body: JSON.stringify({
           to: email,
-          first_name: "there",
+          first_name: firstNameForTest,
           personalized_content: previewResult.copy,
           cta_url: "https://example.com",
           cta_label: "Back to site",
           subject: subjectTemplate.trim() || "We have something for you",
+          variable_values: Object.keys(extraVars).length > 0 ? extraVars : undefined,
         }),
       });
       setTestEmailSent(true);
@@ -320,11 +353,14 @@ export default function TemplatesPage() {
       for (const { varName, pixelField } of variableMappings) {
         if (varName?.trim() && pixelField?.trim()) varMap[varName.trim()] = pixelField;
       }
-      const slotDefaultsToSave = Object.fromEntries(
-        Object.entries(slotDefaults).filter(([, v]) => v != null && String(v).trim() !== "")
-      ) as SlotDefaults;
+      const slotDefaultsToSave: SlotDefaults = {
+        ...(slotDefaults.logo_url?.trim() && { logo_url: slotDefaults.logo_url.trim() }),
+        ...(slotDefaults.cta_url?.trim() && { cta_url: slotDefaults.cta_url.trim() }),
+        ...(slotDefaults.hero_image_url?.trim() && { hero_image_url: slotDefaults.hero_image_url.trim() }),
+        ...(slotDefaults.unsubscribe_footer?.trim() && { unsubscribe_footer: slotDefaults.unsubscribe_footer.trim() }),
+        ...(slotDefaults.style && Object.keys(slotDefaults.style).length > 0 && { style: slotDefaults.style }),
+      };
       const ctaUrl = slotDefaults.cta_url?.trim() || "https://example.com";
-      const ctaLabel = slotDefaults.cta_text?.trim() || "Back to site";
       await fetchApi("/email-templates", {
         method: "POST",
         body: JSON.stringify({
@@ -335,7 +371,7 @@ export default function TemplatesPage() {
           template_id: "minimal_recovery",
           query_hint: previewQuery.trim(),
           cta_url: ctaUrl,
-          cta_label: ctaLabel,
+          cta_label: "Back to site",
           recovery_type: recoveryType,
           slot_defaults: Object.keys(slotDefaultsToSave).length > 0 ? slotDefaultsToSave : undefined,
           variable_mappings: Object.keys(varMap).length > 0 ? varMap : undefined,
@@ -397,20 +433,18 @@ export default function TemplatesPage() {
     if (sd && typeof sd === "object") {
       setSlotDefaults({
         logo_url: sd.logo_url ?? "",
-        brand_name: sd.brand_name ?? "",
-        headline: sd.headline ?? "",
-        cta_text: sd.cta_text ?? t.ctaLabel ?? "",
         cta_url: sd.cta_url ?? t.ctaUrl ?? "",
         hero_image_url: sd.hero_image_url ?? "",
+        unsubscribe_footer: sd.unsubscribe_footer ?? "",
+        style: sd.style ?? {},
       });
     } else {
       setSlotDefaults({
         logo_url: "",
-        brand_name: "",
-        headline: "",
-        cta_text: t.ctaLabel ?? "",
         cta_url: t.ctaUrl ?? "",
         hero_image_url: "",
+        unsubscribe_footer: "",
+        style: {},
       });
     }
     const vm = t.variableMappings;
@@ -565,12 +599,80 @@ export default function TemplatesPage() {
             </div>
           </div>
 
-          {/* Customize */}
+          {/* Customise: style/format only (font size & colour) */}
           <div className="mb-6 p-4 bg-dark-secondary border border-dark-border rounded-lg">
-            <h3 className="text-white font-medium mb-2">Customize</h3>
+            <h3 className="text-white font-medium mb-2">Customise</h3>
             <p className="text-gray-400 text-sm mb-3">
-              Set logo, brand name, headline, CTA, and optional hero image. These are template settings (not from the knowledge base) and appear in every email using this template.
+              Set font size and colour for Headline, Sub-heading, Bullet point, and Call to Action. Content for these comes from your prompt using {`{{Headline}}`}, {`{{Sub_Heading}}`}, {`{{Bullet_Point}}`}, {`{{CTA}}`}.
             </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+              {(["headline", "subheading", "bullet", "cta"] as const).map((key) => (
+                <div key={key} className={key === "cta" ? "sm:col-span-2 flex flex-wrap gap-2 items-end" : "flex flex-wrap gap-2 items-end"}>
+                  <div className="flex-1 min-w-[80px]">
+                    <label className="text-gray-400 text-xs block mb-1">
+                      {key === "headline" ? "Headline" : key === "subheading" ? "Sub-heading" : key === "bullet" ? "Bullet point" : "CTA"} font size
+                    </label>
+                    <input
+                      placeholder="e.g. 24px"
+                      value={slotDefaults.style?.[key]?.fontSize ?? ""}
+                      onChange={(e) =>
+                        setSlotDefaults((p) => ({
+                          ...p,
+                          style: {
+                            ...p.style,
+                            [key]: { ...p.style?.[key], fontSize: e.target.value },
+                          },
+                        }))
+                      }
+                      className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[80px]">
+                    <label className="text-gray-400 text-xs block mb-1">
+                      {key === "cta" ? "CTA text colour" : "Colour"}
+                    </label>
+                    <input
+                      placeholder="e.g. #3730a3"
+                      value={slotDefaults.style?.[key]?.color ?? ""}
+                      onChange={(e) =>
+                        setSlotDefaults((p) => ({
+                          ...p,
+                          style: {
+                            ...p.style,
+                            [key]: { ...p.style?.[key], color: e.target.value },
+                          },
+                        }))
+                      }
+                      className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
+                    />
+                  </div>
+                  {key === "cta" && (
+                    <div className="flex-1 min-w-[80px]">
+                      <label className="text-gray-400 text-xs block mb-1">CTA button background</label>
+                      <input
+                        placeholder="e.g. #6366f1"
+                        value={slotDefaults.style?.cta?.backgroundColor ?? ""}
+                        onChange={(e) =>
+                          setSlotDefaults((p) => ({
+                            ...p,
+                            style: {
+                              ...p.style,
+                              cta: { ...p.style?.cta, backgroundColor: e.target.value },
+                            },
+                          }))
+                        }
+                        className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Template links & media */}
+          <div className="mb-6 p-4 bg-dark-secondary border border-dark-border rounded-lg">
+            <h3 className="text-white font-medium mb-2">Template links &amp; media</h3>
+            <p className="text-gray-400 text-sm mb-3">Logo, CTA link, and optional hero image for the preset.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl">
               <div>
                 <label className="text-gray-400 text-xs block mb-1">Logo URL</label>
@@ -578,33 +680,6 @@ export default function TemplatesPage() {
                   placeholder="https://..."
                   value={slotDefaults.logo_url ?? ""}
                   onChange={(e) => setSlotDefaults((p) => ({ ...p, logo_url: e.target.value }))}
-                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-gray-400 text-xs block mb-1">Brand name</label>
-                <input
-                  placeholder="Your Company"
-                  value={slotDefaults.brand_name ?? ""}
-                  onChange={(e) => setSlotDefaults((p) => ({ ...p, brand_name: e.target.value }))}
-                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="text-gray-400 text-xs block mb-1">Headline</label>
-                <input
-                  placeholder="We have something for you"
-                  value={slotDefaults.headline ?? ""}
-                  onChange={(e) => setSlotDefaults((p) => ({ ...p, headline: e.target.value }))}
-                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-gray-400 text-xs block mb-1">CTA text</label>
-                <input
-                  placeholder="Learn more"
-                  value={slotDefaults.cta_text ?? ""}
-                  onChange={(e) => setSlotDefaults((p) => ({ ...p, cta_text: e.target.value }))}
                   className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
                 />
               </div>
@@ -625,6 +700,18 @@ export default function TemplatesPage() {
                   onChange={(e) => setSlotDefaults((p) => ({ ...p, hero_image_url: e.target.value }))}
                   className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
                 />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-gray-400 text-xs block mb-1">Unsubscribe footer text</label>
+                <input
+                  placeholder="e.g. You received this because you visited our site. Unsubscribe from these emails."
+                  value={slotDefaults.unsubscribe_footer ?? ""}
+                  onChange={(e) => setSlotDefaults((p) => ({ ...p, unsubscribe_footer: e.target.value }))}
+                  className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500 text-sm"
+                />
+                <p className="text-gray-500 text-xs mt-1">
+                  Use <code className="text-accent-primary">{`{{unsubscribe_url}}`}</code> inside a link for the unsubscribe link, e.g. <code className="text-gray-400">&lt;a href="{`{{unsubscribe_url}}`}"&gt;Unsubscribe&lt;/a&gt;</code>
+                </p>
               </div>
             </div>
           </div>
@@ -647,17 +734,22 @@ export default function TemplatesPage() {
               onChange={(e) => setPreviewQuery(e.target.value)}
               className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500"
             />
-            <input
-              placeholder="Subject line"
-              value={subjectTemplate}
-              onChange={(e) => setSubjectTemplate(e.target.value)}
-              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500"
-            />
+            <div>
+              <input
+                placeholder="Subject line (e.g. Hi {{First_Name}}, we have something for you)"
+                value={subjectTemplate}
+                onChange={(e) => setSubjectTemplate(e.target.value)}
+                className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500"
+              />
+              <p className="text-gray-500 text-xs mt-1">
+                Use the same variables as in your prompt (e.g. <code className="text-accent-primary">{`{{First_Name}}`}</code>, <code className="text-accent-primary">{`{{Company_Name}}`}</code>). They are replaced per contact when sending.
+              </p>
+            </div>
             <textarea
-              placeholder="Custom prompt (optional). Use {{context}}, {{first_name}}, {{query_hint}}, {{cta_label}}, or add variables below like {{company_name}}, {{job_title}}"
+              placeholder="Custom prompt. Use {{Headline}}, {{Sub_Heading}}, {{Bullet_Point}}, {{CTA}} for structured slots (filled by the model). Also {{context}}, {{first_name}}, {{query_hint}}, or variables below."
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
-              rows={3}
+              rows={4}
               className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500"
             />
             <div className="space-y-2">

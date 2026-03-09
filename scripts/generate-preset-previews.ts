@@ -40,6 +40,11 @@ function escapeForTsString(s: string): string {
 
 const BODY_PLACEHOLDER = "%%%EMAIL_BODY%%%";
 const FIRST_NAME_PLACEHOLDER = "%%%FIRST_NAME%%%";
+const HEADLINE_PLACEHOLDER = "%%%HEADLINE%%%";
+const SUBHEADING_PLACEHOLDER = "%%%SUBHEADING%%%";
+const CTA_PLACEHOLDER = "%%%CTA%%%";
+const BULLETS_PLACEHOLDER = "%%%BULLETS%%%";
+const UNSUBSCRIBE_FOOTER_PLACEHOLDER = "%%%UNSUBSCRIBE_FOOTER%%%";
 const htmlByPreset: Record<string, string> = {};
 for (const id of PRESET_IDS) {
   const sample = sampleByPreset[id] ?? {
@@ -48,14 +53,16 @@ for (const id of PRESET_IDS) {
   const sampleSlots = {
     first_name: FIRST_NAME_PLACEHOLDER,
     body: BODY_PLACEHOLDER,
-    subheadline: sample.subheadline ?? "",
-    cta_text: "Back to site",
+    subheadline: SUBHEADING_PLACEHOLDER,
+    cta_text: CTA_PLACEHOLDER,
     cta_url: "https://example.com",
-    cta_label: "Back to site",
+    cta_label: CTA_PLACEHOLDER,
     unsubscribe_url: "https://example.com/unsubscribe",
-    headline: SUBJECTS[id],
-    brand_name: "Your Company",
+    headline: HEADLINE_PLACEHOLDER,
+    brand_name: "",
     subject: SUBJECTS[id],
+    bullets: [BULLETS_PLACEHOLDER],
+    unsubscribe_footer: UNSUBSCRIBE_FOOTER_PLACEHOLDER,
   };
   const html = compilePreset(id, sampleSlots);
   htmlByPreset[id] = html;
@@ -79,6 +86,11 @@ lines.push("};");
 lines.push("");
 lines.push("export const PRESET_BODY_PLACEHOLDER = \"" + BODY_PLACEHOLDER + "\";");
 lines.push("export const PRESET_FIRST_NAME_PLACEHOLDER = \"" + FIRST_NAME_PLACEHOLDER + "\";");
+lines.push("export const PRESET_HEADLINE_PLACEHOLDER = \"" + HEADLINE_PLACEHOLDER + "\";");
+lines.push("export const PRESET_SUBHEADING_PLACEHOLDER = \"" + SUBHEADING_PLACEHOLDER + "\";");
+lines.push("export const PRESET_CTA_PLACEHOLDER = \"" + CTA_PLACEHOLDER + "\";");
+lines.push("export const PRESET_BULLETS_PLACEHOLDER = \"" + BULLETS_PLACEHOLDER + "\";");
+lines.push("export const PRESET_UNSUBSCRIBE_FOOTER_PLACEHOLDER = \"" + UNSUBSCRIBE_FOOTER_PLACEHOLDER + "\";");
 lines.push("");
 
 fs.mkdirSync(outDir, { recursive: true });

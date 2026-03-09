@@ -8,11 +8,40 @@ import {
   PRESET_PREVIEW_HTML,
   PRESET_BODY_PLACEHOLDER,
   PRESET_FIRST_NAME_PLACEHOLDER,
+  PRESET_HEADLINE_PLACEHOLDER,
+  PRESET_SUBHEADING_PLACEHOLDER,
+  PRESET_CTA_PLACEHOLDER,
+  PRESET_BULLETS_PLACEHOLDER,
+  PRESET_UNSUBSCRIBE_FOOTER_PLACEHOLDER,
 } from "@/lib/reactivate/templates/preset-previews.generated";
 import sanitizeHtml from "sanitize-html";
 
+const SAFE_HTML_OPTS = {
+  allowedTags: ["p", "br", "strong", "b", "em", "i", "u", "a", "ul", "ol", "li"],
+  allowedAttributes: { a: ["href", "target", "rel"] },
+  allowedSchemes: ["http", "https", "mailto"],
+} as const;
+
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+type ElementStyle = { fontSize?: string; color?: string; backgroundColor?: string };
+const SAFE_SIZE = /^(\d+(?:\.\d+)?)(px|em|rem|%)?$/i;
+const SAFE_COLOR = /^(#[\da-fA-F]{3,8}|rgb\s*\([^)]+\)|rgba\s*\([^)]+\)|[a-zA-Z]+)$/;
+/** Inline style for text (no backgroundColor - that is applied to the CTA button separately). */
+function inlineStyle(style: ElementStyle | null | undefined): string {
+  if (!style || (style.fontSize == null && style.color == null)) return "";
+  const parts: string[] = [];
+  const fs = style.fontSize?.trim();
+  if (fs && SAFE_SIZE.test(fs)) parts.push(`font-size: ${fs}`);
+  const col = style.color?.trim();
+  if (col && SAFE_COLOR.test(col)) parts.push(`color: ${col}`);
+  return parts.length ? ` style="${parts.join("; ")}"` : "";
+}
+function wrapWithStyle(html: string, style: ElementStyle | null | undefined): string {
+  const s = inlineStyle(style);
+  return s ? `<span${s}>${html}</span>` : html;
 }
 
 /** Replace {{VarName}} and [VarName] in text with values from variable_values (for preview testing). */
@@ -57,9 +86,16 @@ export async function POST(request: NextRequest) {
     cta_url,
     cta_label,
     headline,
+    subheading,
+    bullets: bulletsArr,
+    cta,
     brand_name,
+    unsubscribe_footer: unsubscribeFooterInput,
     variable_values,
+    style: styleInput,
   } = body;
+
+  const style = styleInput && typeof styleInput === "object" && !Array.isArray(styleInput) ? styleInput as Record<string, ElementStyle> : null;
 
   const base =
     process.env.APP_BASE_URL ||
@@ -91,14 +127,46 @@ export async function POST(request: NextRequest) {
     let bodyContent = (personalized_content ?? slots.personalized_content ?? "").toString().trim();
     bodyContent = substituteVariablePlaceholders(bodyContent, variable_values, firstName);
     if (bodyContent) {
-      const safeBody = sanitizeHtml(bodyContent.replace(/\n/g, "<br/>"), {
-        allowedTags: ["p", "br", "strong", "b", "em", "i", "u", "a", "ul", "ol", "li"],
-        allowedAttributes: { a: ["href", "target", "rel"] },
-        allowedSchemes: ["http", "https", "mailto"],
-      });
+      const safeBody = sanitizeHtml(bodyContent.replace(/\n/g, "<br/>"), SAFE_HTML_OPTS);
       html = html.split(PRESET_BODY_PLACEHOLDER).join(safeBody);
     }
     html = html.split(PRESET_FIRST_NAME_PLACEHOLDER).join(firstName);
+    const structuredHeadline = (headline ?? "").toString().trim();
+    const structuredSubheading = (subheading ?? "").toString().trim();
+    const structuredCta = (cta ?? cta_label ?? "").toString().trim();
+    const headlineStyle = style?.headline;
+    const subheadingStyle = style?.subheading;
+    const bulletStyle = style?.bullet;
+    const ctaStyle = style?.cta;
+    if (structuredHeadline) html = html.split(PRESET_HEADLINE_PLACEHOLDER).join(wrapWithStyle(sanitizeHtml(structuredHeadline, SAFE_HTML_OPTS), headlineStyle));
+    if (structuredSubheading) html = html.split(PRESET_SUBHEADING_PLACEHOLDER).join(wrapWithStyle(sanitizeHtml(structuredSubheading.replace(/\n/g, "<br/>"), SAFE_HTML_OPTS), subheadingStyle));
+    if (structuredCta) html = html.split(PRESET_CTA_PLACEHOLDER).join(wrapWithStyle(sanitizeHtml(structuredCta, SAFE_HTML_OPTS), ctaStyle));
+    if (ctaStyle?.backgroundColor?.trim() && SAFE_COLOR.test(ctaStyle.backgroundColor.trim())) {
+      const ctaBg = ctaStyle.backgroundColor.trim();
+      html = html.replace(/bgcolor="#6366f1"/g, `bgcolor="${ctaBg}"`);
+      html = html.replace(/background:#6366f1/g, `background:${ctaBg}`);
+    }
+    if (ctaStyle?.color?.trim() && SAFE_COLOR.test(ctaStyle.color.trim())) {
+      html = html.replace(/color:#ffffff(?!\d)/g, `color:${ctaStyle.color!.trim()}`);
+    }
+    const defaultUnsubscribeFooter =
+      `You received this because you visited our site. <a href="${unsubscribeUrl}" color="#6366f1">Unsubscribe</a> from these emails.`;
+    const unsubscribeFooterRaw =
+      (typeof unsubscribeFooterInput === "string" && unsubscribeFooterInput.trim()) || defaultUnsubscribeFooter;
+    const unsubscribeFooterHtml = sanitizeHtml(
+      unsubscribeFooterRaw.replace(/\{\{unsubscribe_url\}\}/gi, unsubscribeUrl),
+      SAFE_HTML_OPTS
+    );
+    html = html.split(PRESET_UNSUBSCRIBE_FOOTER_PLACEHOLDER).join(unsubscribeFooterHtml);
+
+    const bullets = Array.isArray(bulletsArr) ? bulletsArr.filter((b) => b != null && String(b).trim()) : [];
+    if (bullets.length > 0) {
+      const bulletParts = bullets.map((b) => wrapWithStyle(sanitizeHtml(String(b).replace(/\n/g, "<br/>"), SAFE_HTML_OPTS), bulletStyle));
+      const listItems = bulletParts.map((part) => `<li style="margin-bottom: 6px;">${part}</li>`).join("");
+      const bulletsBlock = `<ul style="list-style-type: disc; padding-left: 20px; margin: 0 0 16px 0;">${listItems}</ul>`;
+      const bulletsPattern = new RegExp(`<ul>\\s*<li>\\s*${escapeRegex(PRESET_BULLETS_PLACEHOLDER)}\\s*</li>\\s*</ul>`);
+      html = html.replace(bulletsPattern, bulletsBlock);
+    }
   } else if (recovery_type && isValidRecoveryType(recovery_type)) {
     let bodyContent = slots.personalized_content?.trim() || slots.personalized_content || "";
     bodyContent = substituteVariablePlaceholders(bodyContent, variable_values, firstName);

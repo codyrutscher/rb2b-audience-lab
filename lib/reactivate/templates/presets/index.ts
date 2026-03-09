@@ -137,6 +137,10 @@ function applySlotsToMjml(mjml: string, slots: EmailSlots): string {
   const cta_url = escapeForHtml(slots.cta_url || "#");
   const cta_text = escapeForHtml(slots.cta_text || "Learn more");
   const unsubscribe_url = escapeForHtml(slots.unsubscribe_url || "#");
+  const defaultUnsubscribeFooter =
+    'You received this because you visited our site. <a href="{{unsubscribe_url}}" color="#6366f1">Unsubscribe</a> from these emails.';
+  const unsubscribeFooterRaw = (slots.unsubscribe_footer ?? defaultUnsubscribeFooter).trim() || defaultUnsubscribeFooter;
+  const unsubscribe_footer = sanitizeEmailBody(unsubscribeFooterRaw.replace(/\{\{unsubscribe_url\}\}/gi, unsubscribe_url));
   const logoUrlRaw = (slots.logo_url || "").trim();
   const logo_url = escapeForHtml(slots.logo_url || "");
   const brand_name = escapeForHtml(slots.brand_name || "Your Company");
@@ -144,11 +148,19 @@ function applySlotsToMjml(mjml: string, slots: EmailSlots): string {
   const subheadline = sanitizeEmailBody(slots.subheadline || "");
   const preview_text = escapeForHtml((slots.preheader || slots.subject || headline || "").slice(0, 130));
   const hero_image_url = (slots.hero_image_url || "").trim();
+  const bulletsArr = Array.isArray(slots.bullets) ? slots.bullets : [];
+  const bulletsHtml =
+    bulletsArr.length > 0
+      ? "<ul>" + bulletsArr.map((b) => "<li>" + escapeForHtml(String(b)) + "</li>").join("") + "</ul>"
+      : "";
+  const bulletsSlot = sanitizeEmailBody(bulletsHtml);
 
   const headerSlot =
     logoUrlRaw !== ""
       ? `<mj-image src="${logo_url}" alt="${brand_name}" width="120px" padding="0 0 12px" />`
-      : `<mj-text font-size="14px" color="#6b7280" padding="0 0 8px">${brand_name}</mj-text>`;
+      : (brand_name && brand_name.trim() !== ""
+          ? `<mj-text font-size="14px" color="#6b7280" padding="0 0 8px">${brand_name}</mj-text>`
+          : "");
 
   const heroImageSlot =
     hero_image_url !== ""
@@ -165,11 +177,13 @@ function applySlotsToMjml(mjml: string, slots: EmailSlots): string {
     .replace(/\{\{cta_text\}\}/gi, cta_text)
     .replace(/\{\{cta_label\}\}/gi, cta_text)
     .replace(/\{\{unsubscribe_url\}\}/gi, unsubscribe_url)
+    .replace(/\{\{unsubscribe_footer\}\}/gi, unsubscribe_footer)
     .replace(/\{\{logo_url\}\}/gi, logo_url)
     .replace(/\{\{brand_name\}\}/gi, brand_name)
     .replace(/\{\{headline\}\}/gi, headline)
     .replace(/\{\{subheadline\}\}/gi, subheadline)
-    .replace(/\{\{preview_text\}\}/gi, preview_text);
+    .replace(/\{\{preview_text\}\}/gi, preview_text)
+    .replace(/\{\{bullets\}\}/gi, bulletsSlot);
 }
 
 /**

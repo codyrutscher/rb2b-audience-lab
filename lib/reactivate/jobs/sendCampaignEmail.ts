@@ -7,6 +7,7 @@ import { resolveEmailForSend } from "../emailResolution";
 import { compileRecipe } from "../templates/compiler";
 import { templateSlotsToEmailSlots } from "../templates/slotsBridge";
 import { isValidRecoveryType } from "../recipes";
+import { substituteVariables } from "../substituteVariables";
 
 const COOLDOWN_HOURS = 24;
 
@@ -166,9 +167,14 @@ export async function sendCampaignEmailForContact(
     return { sent: false, error: msg };
   }
 
+  const subjectResolved = substituteVariables(subjectText ?? "", {
+    variableValues: extraVariables,
+    firstName: contact.firstName ?? undefined,
+  });
+
   const { messageId, error: sendError } = await sendEmail({
     to: toEmail,
-    subject: subjectText,
+    subject: subjectResolved.trim() || subjectText?.trim() || "We have something for you",
     html,
   });
 

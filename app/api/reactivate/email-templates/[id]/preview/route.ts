@@ -6,6 +6,7 @@ import { renderTemplate, type TemplateId } from "@/lib/reactivate/templates";
 import { templateSlotsToEmailSlots } from "@/lib/reactivate/templates/slotsBridge";
 import { isValidRecoveryType } from "@/lib/reactivate/recipes";
 import { prisma } from "@/lib/reactivate/db";
+import { substituteVariables } from "@/lib/reactivate/substituteVariables";
 
 export const dynamic = "force-dynamic";
 
@@ -89,10 +90,19 @@ export async function POST(
     html = renderTemplate(template.templateId as TemplateId, slots);
   }
 
+  const variableMappings = template.variableMappings as Record<string, string> | null;
+  const sampleVariableValues = variableMappings
+    ? Object.fromEntries(Object.keys(variableMappings).map((varName) => [varName, "Sample"]))
+    : undefined;
+  const subjectResolved = substituteVariables(template.subjectTemplate ?? "", {
+    variableValues: sampleVariableValues,
+    firstName: "there",
+  });
+
   return NextResponse.json({
     copy,
     html,
-    subject: template.subjectTemplate,
+    subject: subjectResolved.trim() || template.subjectTemplate,
     chunks_used: chunks.length,
   });
 }

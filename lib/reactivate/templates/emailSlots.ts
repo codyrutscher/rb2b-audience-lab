@@ -21,6 +21,8 @@ export interface EmailSlots {
   brand_name?: string;
   company_address?: string;
   unsubscribe_url?: string;
+  /** Editable footer text; may contain <a href="{{unsubscribe_url}}">...</a>. */
+  unsubscribe_footer?: string;
   preferences_url?: string;
   first_name?: string;
   hero_image_url?: string;
