@@ -6,7 +6,9 @@ import { isValidRecoveryType } from "@/lib/reactivate/recipes";
 import {
   PRESET_IDS,
   PRESET_PREVIEW_HTML,
+  PRESET_BODY_PLACEHOLDER,
 } from "@/lib/reactivate/templates/preset-previews.generated";
+import sanitizeHtml from "sanitize-html";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +57,15 @@ export async function POST(request: NextRequest) {
     html = PRESET_PREVIEW_HTML[preset_id] ?? "";
     if (!html) {
       return NextResponse.json({ error: "Preset preview not found" }, { status: 404 });
+    }
+    const bodyContent = (personalized_content ?? slots.personalized_content ?? "").toString().trim();
+    if (bodyContent) {
+      const safeBody = sanitizeHtml(bodyContent.replace(/\n/g, "<br/>"), {
+        allowedTags: ["p", "br", "strong", "b", "em", "i", "u", "a", "ul", "ol", "li"],
+        allowedAttributes: { a: ["href", "target", "rel"] },
+        allowedSchemes: ["http", "https", "mailto"],
+      });
+      html = html.split(PRESET_BODY_PLACEHOLDER).join(safeBody);
     }
   } else if (recovery_type && isValidRecoveryType(recovery_type)) {
     const bodyContent = slots.personalized_content?.trim() || slots.personalized_content || "";

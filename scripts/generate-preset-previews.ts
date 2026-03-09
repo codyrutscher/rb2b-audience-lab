@@ -38,6 +38,7 @@ function escapeForTsString(s: string): string {
     .replace(/\r/g, "");
 }
 
+const BODY_PLACEHOLDER = "%%%EMAIL_BODY%%%";
 const htmlByPreset: Record<string, string> = {};
 for (const id of PRESET_IDS) {
   const sample = sampleByPreset[id] ?? {
@@ -45,7 +46,7 @@ for (const id of PRESET_IDS) {
   };
   const sampleSlots = {
     first_name: "there",
-    body: sample.body,
+    body: BODY_PLACEHOLDER,
     subheadline: sample.subheadline ?? "",
     cta_text: "Back to site",
     cta_url: "https://example.com",
@@ -74,6 +75,8 @@ for (const id of PRESET_IDS) {
   lines.push(`  "${id}": \`${escapeForTsString(html)}\`,`);
 }
 lines.push("};");
+lines.push("");
+lines.push("export const PRESET_BODY_PLACEHOLDER = \"" + BODY_PLACEHOLDER + "\";");
 lines.push("");
 
 fs.mkdirSync(outDir, { recursive: true });

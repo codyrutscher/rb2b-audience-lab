@@ -166,7 +166,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.6;text-align:left;color:#374151;"
-      >You were looking at something on our site. We saved your place. Come back anytime. If you have questions, just reply to this email.</div>
+      >%%%EMAIL_BODY%%%</div>
     
                 </td>
               </tr>
@@ -414,7 +414,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.6;text-align:left;color:#374151;"
-      >Here is a quick recap of what you looked at and why it is a good fit. Key benefits: simple setup, great support, and results you can measure. Ready to pick up where you left off?</div>
+      >%%%EMAIL_BODY%%%</div>
     
                 </td>
               </tr>
@@ -698,7 +698,7 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
                   
       <div
          style="font-family:Ubuntu, Helvetica, Arial, sans-serif;font-size:16px;line-height:1.6;text-align:left;color:#374151;"
-      >We have not seen you in a while and wanted to say hi. A few things have changed: new features, better pricing, and the same team here to help. We would love to have you back.</div>
+      >%%%EMAIL_BODY%%%</div>
     
                 </td>
               </tr>
@@ -888,3 +888,5 @@ export const PRESET_PREVIEW_HTML: Record<string, string> = {
 </html>
   `,
 };
+
+export const PRESET_BODY_PLACEHOLDER = "%%%EMAIL_BODY%%%";
