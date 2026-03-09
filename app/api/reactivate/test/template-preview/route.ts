@@ -3,7 +3,8 @@ import { getAccountIdFromRequest } from "@/lib/reactivate/auth";
 import { renderTemplate, TEMPLATE_IDS, type TemplateId } from "@/lib/reactivate/templates";
 import { templateSlotsToEmailSlots } from "@/lib/reactivate/templates/slotsBridge";
 import { isValidRecoveryType } from "@/lib/reactivate/recipes";
-import { compilePreset, isValidPresetId, PRESET_METADATA } from "@/lib/reactivate/templates/presets";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,6 +47,9 @@ export async function POST(request: NextRequest) {
     : null;
 
   let html: string;
+  const { compilePreset, isValidPresetId, PRESET_METADATA } = await import(
+    "@/lib/reactivate/templates/presets"
+  );
   if (preset_id && isValidPresetId(preset_id)) {
     const bodyContent = slots.personalized_content?.trim() || slots.personalized_content || "";
     const presetMeta = PRESET_METADATA[preset_id];

@@ -3,10 +3,11 @@ import { getAccountIdFromRequest } from "@/lib/reactivate/auth";
 import { generateCopy } from "@/lib/reactivate/copyGeneration";
 import { retrieveChunks } from "@/lib/reactivate/retrieval";
 import { renderTemplate, type TemplateId } from "@/lib/reactivate/templates";
-import { compileRecipe } from "@/lib/reactivate/templates/compiler";
 import { templateSlotsToEmailSlots } from "@/lib/reactivate/templates/slotsBridge";
 import { isValidRecoveryType } from "@/lib/reactivate/recipes";
 import { prisma } from "@/lib/reactivate/db";
+
+export const dynamic = "force-dynamic";
 
 /**
  * POST /api/reactivate/email-templates/:id/preview
@@ -69,6 +70,7 @@ export async function POST(
   let html: string;
   const recoveryType = template.recoveryType;
   if (recoveryType && isValidRecoveryType(recoveryType)) {
+    const { compileRecipe } = await import("@/lib/reactivate/templates/compiler");
     const slotDefaults = template.slotDefaults as Record<string, unknown> | null;
     const emailSlots = templateSlotsToEmailSlots(
       slots,

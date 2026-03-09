@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Copy, Check, Code, Plus } from "lucide-react";
 
@@ -28,6 +28,7 @@ export default function InstallPage() {
   const [pixelName, setPixelName] = useState("");
   const [pixelWebsiteName, setPixelWebsiteName] = useState("");
   const [pixelWebsiteUrl, setPixelWebsiteUrl] = useState("");
+  const hasAutoSelectedRef = useRef(false);
 
   const loadPixels = useCallback(async () => {
     setLoading(true);
@@ -38,7 +39,8 @@ export default function InstallPage() {
         const list = d.pixels || [];
         setPixels(list);
         const withInstallUrl = list.filter((p: Pixel) => p.audiencelabInstallUrl);
-        if (withInstallUrl.length > 0 && !selectedPixelId) {
+        if (withInstallUrl.length > 0 && !hasAutoSelectedRef.current) {
+          hasAutoSelectedRef.current = true;
           setSelectedPixelId(withInstallUrl[0].id);
         }
       }

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAccountIdFromRequest } from "@/lib/reactivate/auth";
-import { PRESET_METADATA, PRESET_IDS } from "@/lib/reactivate/templates/presets";
+import { PRESET_METADATA, PRESET_IDS } from "@/lib/reactivate/templates/preset-previews.generated";
+
+export const dynamic = "force-dynamic";
 
 /**
  * GET /api/reactivate/preset-templates
