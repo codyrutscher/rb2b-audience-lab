@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAccountIdFromRequest } from "@/lib/reactivate/auth";
 import { prisma } from "@/lib/reactivate/db";
 import { TEMPLATE_IDS } from "@/lib/reactivate/templates";
+import { normalizeChunkQueryVariablesPayload } from "@/lib/reactivate/chunkQueryVariablesApi";
 
 export async function GET(request: Request) {
   const accountId = await getAccountIdFromRequest(request);
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
     subject_template,
     template_id,
     query_hint,
+    chunk_query_variables,
     cta_url,
     cta_label,
     variable_mappings,
@@ -75,6 +77,8 @@ export async function POST(request: NextRequest) {
       ? slot_defaults
       : {};
 
+  const chunkQueryVariables = normalizeChunkQueryVariablesPayload(chunk_query_variables);
+
   const template = await prisma.rtEmailTemplate.create({
     data: {
       accountId,
@@ -84,6 +88,7 @@ export async function POST(request: NextRequest) {
       subjectTemplate: subject_template?.trim() || "We have something for you",
       templateId,
       queryHint: query_hint?.trim() || null,
+      chunkQueryVariables: chunkQueryVariables ?? undefined,
       ctaUrl: cta_url?.trim() || null,
       ctaLabel: cta_label?.trim() || null,
       variableMappings,

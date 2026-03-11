@@ -8,6 +8,7 @@ import { compileRecipe } from "../templates/compiler";
 import { templateSlotsToEmailSlots } from "../templates/slotsBridge";
 import { isValidRecoveryType } from "../recipes";
 import { substituteVariables, stripLeadingGreeting } from "../substituteVariables";
+import { resolveChunkQueryVariables, normalizeChunkQueryMap } from "../chunkQueryResolution";
 
 const COOLDOWN_HOURS = 24;
 
@@ -75,6 +76,12 @@ export async function sendCampaignEmailForContact(
   const ctaLabel = campaign.emailTemplate?.ctaLabel ?? campaign.ctaLabel;
   const queryHint = campaign.emailTemplate?.queryHint ?? campaign.queryHint;
   const variableMappings = (campaign.emailTemplate?.variableMappings ?? {}) as Record<string, string> | null;
+  const chunkQueryVariables = campaign.emailTemplate?.chunkQueryVariables as string[] | Record<string, string> | null | undefined;
+  const chunkQueryNames = chunkQueryVariables
+    ? Array.isArray(chunkQueryVariables)
+      ? chunkQueryVariables.map((s) => String(s).trim()).filter(Boolean)
+      : Object.keys(chunkQueryVariables).filter((k) => k?.trim())
+    : [];
 
   const queryParts: string[] = [campaign.segment.name];
   if (queryHint?.trim()) queryParts.push(queryHint.trim());
@@ -121,9 +128,20 @@ export async function sendCampaignEmailForContact(
       queryHint: queryHint ?? undefined,
       customPrompt: copyPrompt,
       extraVariables: Object.keys(extraVariables).length > 0 ? extraVariables : undefined,
+      chunkQueryVariableNames: chunkQueryNames.length > 0 ? chunkQueryNames : undefined,
       maxNewTokens: 350,
     });
     personalizedContent = copyResult.copy;
+    if (chunkQueryNames.length > 0 && normalizeChunkQueryMap(chunkQueryVariables).size > 0) {
+      personalizedContent = await resolveChunkQueryVariables(personalizedContent, {
+        accountId: contact.accountId,
+        knowledgeBankId: kbId,
+        chunkQueryVariables,
+        variableValues: extraVariables,
+        maxCharsPerVariable: 4000,
+        topKPerQuery: 10,
+      });
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     await logSend(contact.accountId, contactId, segmentCampaignId, campaign.templateId, campaign.emailTemplateId, toEmail, null, "failed", msg);
@@ -169,7 +187,18 @@ export async function sendCampaignEmailForContact(
     return { sent: false, error: msg };
   }
 
-  const subjectResolved = substituteVariables(subjectText ?? "", {
+  let subjectResolved = subjectText ?? "";
+  if (chunkQueryNames.length > 0 && normalizeChunkQueryMap(chunkQueryVariables).size > 0) {
+    subjectResolved = await resolveChunkQueryVariables(subjectResolved, {
+      accountId: contact.accountId,
+      knowledgeBankId: kbId,
+      chunkQueryVariables,
+      variableValues: extraVariables,
+      maxCharsPerVariable: 200,
+      topKPerQuery: 2,
+    });
+  }
+  subjectResolved = substituteVariables(subjectResolved, {
     variableValues: extraVariables,
     firstName: contact.firstName ?? undefined,
   });

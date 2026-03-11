@@ -228,10 +228,11 @@ model RtEmailTemplate {
   queryHint        String?   @map("query_hint")
   ctaUrl           String?   @map("cta_url")
   ctaLabel         String?   @map("cta_label")
-  variableMappings Json?     @default("{}") @map("variable_mappings")
-  recoveryType     String?   @default("product_interest") @map("recovery_type")
-  slotDefaults     Json?     @default("{}") @map("slot_defaults")
-  enabled          Boolean   @default(false)
+  variableMappings     Json?     @default("{}") @map("variable_mappings")
+  chunkQueryVariables  Json?     @map("chunk_query_variables")
+  recoveryType         String?   @default("product_interest") @map("recovery_type")
+  slotDefaults         Json?     @default("{}") @map("slot_defaults")
+  enabled              Boolean   @default(false)
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
   segmentCampaigns RtSegmentCampaign[]
@@ -244,6 +245,7 @@ model RtKnowledgeDocument {
   knowledgeBankId String   @map("knowledge_bank_id")
   knowledgeBank   RtKnowledgeBank @relation(fields: [knowledgeBankId], references: [id], onDelete: Cascade)
   filename        String
+  label           String?  @db.VarChar(120) // e.g. "Pricing" for variable + instruction query
   status          String   @default("pending")
   hash            String?
   storagePath     String?  @map("storage_path")

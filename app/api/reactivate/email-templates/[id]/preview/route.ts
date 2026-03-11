@@ -7,6 +7,7 @@ import { templateSlotsToEmailSlots } from "@/lib/reactivate/templates/slotsBridg
 import { isValidRecoveryType } from "@/lib/reactivate/recipes";
 import { prisma } from "@/lib/reactivate/db";
 import { substituteVariables } from "@/lib/reactivate/substituteVariables";
+import { resolveChunkQueryVariables, normalizeChunkQueryMap } from "@/lib/reactivate/chunkQueryResolution";
 
 export const dynamic = "force-dynamic";
 
@@ -45,12 +46,20 @@ export async function POST(
       ? chunks.map((c) => c.text).join("\n\n")
       : template.knowledgeBank.description || "No relevant content found.";
 
+  const chunkQueryVars = template.chunkQueryVariables as string[] | Record<string, string> | null | undefined;
+  const chunkQueryNames = chunkQueryVars
+    ? Array.isArray(chunkQueryVars)
+      ? chunkQueryVars.map((s) => String(s).trim()).filter(Boolean)
+      : Object.keys(chunkQueryVars).filter((k) => k?.trim())
+    : [];
+
   const copy = await generateCopy({
     retrievedText,
     firstName: "there",
     ctaLabel: template.ctaLabel ?? null,
     queryHint: template.queryHint ?? null,
     customPrompt: template.copyPrompt ?? null,
+    chunkQueryVariableNames: chunkQueryNames.length > 0 ? chunkQueryNames : undefined,
     maxNewTokens: 350,
   });
 
@@ -60,7 +69,17 @@ export async function POST(
     "http://localhost:3000";
   const unsubscribeUrl = `${base.replace(/\/$/, "")}/api/reactivate/unsubscribe?email=preview@example.com&account=${encodeURIComponent(accountId)}`;
 
-  const copyText = typeof copy === "string" ? copy : copy.copy;
+  let copyText = typeof copy === "string" ? copy : copy.copy;
+  if (chunkQueryNames.length > 0 && normalizeChunkQueryMap(chunkQueryVars).size > 0) {
+    copyText = await resolveChunkQueryVariables(copyText, {
+      accountId,
+      knowledgeBankId: template.knowledgeBankId,
+      chunkQueryVariables: chunkQueryVars,
+      variableValues: undefined,
+      maxCharsPerVariable: 4000,
+      topKPerQuery: 10,
+    });
+  }
   const slots = {
     first_name: "there",
     personalized_content: copyText,
@@ -95,7 +114,18 @@ export async function POST(
   const sampleVariableValues = variableMappings
     ? Object.fromEntries(Object.keys(variableMappings).map((varName) => [varName, "Sample"]))
     : undefined;
-  const subjectResolved = substituteVariables(template.subjectTemplate ?? "", {
+  let subjectResolved = template.subjectTemplate ?? "";
+  if (chunkQueryNames.length > 0 && normalizeChunkQueryMap(chunkQueryVars).size > 0) {
+    subjectResolved = await resolveChunkQueryVariables(subjectResolved, {
+      accountId,
+      knowledgeBankId: template.knowledgeBankId,
+      chunkQueryVariables: chunkQueryVars,
+      variableValues: sampleVariableValues,
+      maxCharsPerVariable: 200,
+      topKPerQuery: 2,
+    });
+  }
+  subjectResolved = substituteVariables(subjectResolved, {
     variableValues: sampleVariableValues,
     firstName: "there",
   });

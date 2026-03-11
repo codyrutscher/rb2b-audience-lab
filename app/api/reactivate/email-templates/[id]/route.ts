@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAccountIdFromRequest } from "@/lib/reactivate/auth";
 import { prisma } from "@/lib/reactivate/db";
 import { TEMPLATE_IDS } from "@/lib/reactivate/templates";
+import { normalizeChunkQueryVariablesPayload } from "@/lib/reactivate/chunkQueryVariablesApi";
 
 export async function GET(
   request: Request,
@@ -45,6 +46,7 @@ export async function PUT(
     subject_template,
     template_id,
     query_hint,
+    chunk_query_variables,
     cta_url,
     cta_label,
     variable_mappings,
@@ -88,6 +90,11 @@ export async function PUT(
           : {})
       : undefined;
 
+  const chunkQueryVariables =
+    chunk_query_variables !== undefined
+      ? normalizeChunkQueryVariablesPayload(chunk_query_variables)
+      : undefined;
+
   const template = await prisma.rtEmailTemplate.update({
     where: { id },
     data: {
@@ -97,6 +104,7 @@ export async function PUT(
       ...(subject_template !== undefined && { subjectTemplate: subject_template?.trim() || "We have something for you" }),
       ...(template_id && { templateId: template_id }),
       ...(query_hint !== undefined && { queryHint: query_hint?.trim() || null }),
+      ...(chunkQueryVariables !== undefined && { chunkQueryVariables: chunkQueryVariables ?? null }),
       ...(cta_url !== undefined && { ctaUrl: cta_url?.trim() || null }),
       ...(cta_label !== undefined && { ctaLabel: cta_label?.trim() || null }),
       ...(variableMappings !== undefined && { variableMappings }),

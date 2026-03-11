@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, BookOpen, Upload, FileText, Mail } from "lucide-react";
+import { Plus, Edit2, Trash2, BookOpen, Upload, FileText, Mail, Copy, Check } from "lucide-react";
 
 const API_BASE = "/api/reactivate";
 const UNSUBSCRIBE_EXAMPLE = '<a href="{{unsubscribe_url}}">Unsubscribe</a>';
@@ -47,6 +47,7 @@ type EmailTemplate = {
   subjectTemplate: string;
   templateId: string;
   queryHint: string | null;
+  chunkQueryVariables?: string[] | Record<string, string> | null;
   ctaUrl: string | null;
   ctaLabel: string | null;
   variableMappings?: Record<string, string> | null;
@@ -99,6 +100,9 @@ export default function TemplatesPage() {
   const [recoveryType, setRecoveryType] = useState<RecoveryType>("product_interest");
   const [slotDefaults, setSlotDefaults] = useState<SlotDefaults>({ style: {} });
   const [variableMappings, setVariableMappings] = useState<VariableMapping[]>([]);
+  const [chunkQueryVariablesList, setChunkQueryVariablesList] = useState<{ variableName: string; documentLabel: string; query: string }[]>([]);
+  const [kbDocuments, setKbDocuments] = useState<{ id: string; filename: string; label: string | null; status: string }[]>([]);
+  const [copiedLabelId, setCopiedLabelId] = useState<string | null>(null);
   const [previewVariableValues, setPreviewVariableValues] = useState<Record<string, string>>({});
   const [previewingTemplateId, setPreviewingTemplateId] = useState<string | null>(null);
   const [templatePreviewResult, setTemplatePreviewResult] = useState<{
@@ -142,6 +146,43 @@ export default function TemplatesPage() {
       .then((d) => d?.presets && setPresets(d.presets))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!selectedKbId) {
+      setKbDocuments([]);
+      return;
+    }
+    fetch(`${API_BASE}/knowledge-banks/${selectedKbId}/status`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => (d?.documents ? setKbDocuments(d.documents) : setKbDocuments([])))
+      .catch(() => setKbDocuments([]));
+  }, [selectedKbId]);
+
+  async function copyLabelToClipboard(label: string, docId: string) {
+    if (!label.trim()) return;
+    try {
+      await navigator.clipboard.writeText(label.trim());
+      setCopiedLabelId(docId);
+      setTimeout(() => setCopiedLabelId(null), 2000);
+    } catch {
+      setError("Could not copy to clipboard");
+    }
+  }
+
+  async function updateDocumentLabel(kbId: string, docId: string, label: string) {
+    const value = label.trim() || null;
+    try {
+      await fetchApi(`/knowledge-banks/${kbId}/documents/${docId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ label: value }),
+      });
+      setKbDocuments((prev) =>
+        prev.map((d) => (d.id === docId ? { ...d, label: value } : d))
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update label");
+    }
+  }
 
   async function loadAll() {
     setLoading(true);
@@ -217,8 +258,8 @@ export default function TemplatesPage() {
       setError("Choose a template first.");
       return;
     }
-    if (!selectedKbId || !previewQuery.trim()) {
-      setError("Select a knowledge base and enter a query (e.g. product benefits), then click Generate & Preview to create copy.");
+    if (!selectedKbId) {
+      setError("Select a knowledge base, then click Generate & Preview to create copy.");
       return;
     }
     setError(null);
@@ -239,7 +280,7 @@ export default function TemplatesPage() {
         method: "POST",
         body: JSON.stringify({
           knowledge_bank_id: selectedKbId,
-          query: previewQuery.trim(),
+          query: previewQuery.trim() || "benefits",
           custom_prompt: customPrompt.trim() || null,
           first_name: "there",
           extra_variables: Object.keys(extraVars).length > 0 ? extraVars : undefined,
@@ -343,8 +384,8 @@ export default function TemplatesPage() {
       setError("Enter a template name.");
       return;
     }
-    if (!selectedKbId || !previewQuery.trim()) {
-      setError("Select a knowledge base and enter a query first.");
+    if (!selectedKbId) {
+      setError("Select a knowledge base first.");
       return;
     }
     setError(null);
@@ -370,7 +411,18 @@ export default function TemplatesPage() {
           copy_prompt: customPrompt.trim() || null,
           subject_template: subjectTemplate.trim() || "We have something for you",
           template_id: "minimal_recovery",
-          query_hint: previewQuery.trim(),
+          query_hint: previewQuery.trim() || null,
+          chunk_query_variables:
+            chunkQueryVariablesList.filter((r) => r.variableName.trim() && r.query.trim()).length > 0
+              ? Object.fromEntries(
+                  chunkQueryVariablesList
+                    .filter((r) => r.variableName.trim() && r.query.trim())
+                    .map((r) => [
+                      r.variableName.trim(),
+                      { document_label: r.documentLabel.trim(), query: r.query.trim() },
+                    ])
+                )
+              : undefined,
           cta_url: ctaUrl,
           cta_label: "Back to site",
           recovery_type: recoveryType,
@@ -424,6 +476,24 @@ export default function TemplatesPage() {
     setCustomPrompt(t.copyPrompt || "");
     setSubjectTemplate(t.subjectTemplate || "We have something for you");
     setPreviewQuery(t.queryHint || "");
+    const cqv = t.chunkQueryVariables;
+    if (cqv && typeof cqv === "object" && !Array.isArray(cqv)) {
+      const entries = Object.entries(cqv).filter(([k]) => k?.trim());
+      const list = entries.map(([variableName, val]) => {
+        if (val != null && typeof val === "object" && "query" in (val as object)) {
+          const v = val as { documentLabel?: string; document_label?: string; query?: string };
+          return {
+            variableName,
+            documentLabel: (v.documentLabel ?? v.document_label ?? "").toString(),
+            query: (v.query ?? "").toString(),
+          };
+        }
+        return { variableName, documentLabel: "", query: typeof val === "string" ? val : "" };
+      });
+      setChunkQueryVariablesList(list.length ? list : [{ variableName: "", documentLabel: "", query: "" }]);
+    } else {
+      setChunkQueryVariablesList([{ variableName: "", documentLabel: "", query: "" }]);
+    }
     const valid: RecoveryType[] = ["reminder", "product_interest", "social_proof", "objection_handling", "survey_qualification"];
     if (t.recoveryType && valid.includes(t.recoveryType as RecoveryType)) {
       setRecoveryType(t.recoveryType as RecoveryType);
@@ -729,12 +799,116 @@ export default function TemplatesPage() {
                 <option key={kb.id} value={kb.id}>{kb.name}</option>
               ))}
             </select>
-            <input
-              placeholder="Query (e.g. product benefits)"
-              value={previewQuery}
-              onChange={(e) => setPreviewQuery(e.target.value)}
-              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white placeholder-gray-500"
-            />
+            {selectedKbId && kbDocuments.length > 0 && (
+              <div>
+                <p className="text-gray-400 text-sm font-medium mb-2">Document labels (match variables to uploads)</p>
+                <p className="text-gray-500 text-xs mb-2">
+                  Label each upload (e.g. &quot;Pricing&quot;) so you can target it with variables below. Click the copy icon to copy a label, then paste it into the Document label field in each variable row.
+                </p>
+                <div className="space-y-2">
+                  {kbDocuments.map((doc) => (
+                    <div key={doc.id} className="flex flex-wrap items-center gap-2">
+                      <span className="text-gray-400 text-sm truncate max-w-[180px]">{doc.filename}</span>
+                      <input
+                        placeholder="e.g. Pricing"
+                        value={doc.label ?? ""}
+                        onChange={(e) =>
+                          setKbDocuments((prev) =>
+                            prev.map((d) => (d.id === doc.id ? { ...d, label: e.target.value } : d))
+                          )
+                        }
+                        onBlur={(e) => {
+                          const v = e.target.value.trim();
+                          if (v !== (doc.label ?? "")) updateDocumentLabel(selectedKbId, doc.id, v);
+                        }}
+                        className="flex-1 min-w-[120px] px-3 py-1.5 bg-dark-bg border border-dark-border rounded text-white text-sm placeholder-gray-500"
+                      />
+                      {(doc.label ?? "").trim() && (
+                        <button
+                          type="button"
+                          onClick={() => copyLabelToClipboard(doc.label ?? "", doc.id)}
+                          className="p-1.5 text-gray-400 hover:text-accent-primary rounded border border-transparent hover:border-dark-border"
+                          title="Copy label to paste into variables"
+                        >
+                          {copiedLabelId === doc.id ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
+                      <span className="text-gray-500 text-xs">{doc.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div>
+              <p className="text-gray-400 text-sm font-medium mb-1">Labeled chunk variables (optional)</p>
+              <p className="text-gray-500 text-xs mb-2">
+                Variable + document label + instruction query. Use <code className="text-accent-primary">{`{{Pricing_incentives}}`}</code> etc. in your prompt; each is filled by retrieval from the labeled document.
+              </p>
+              {chunkQueryVariablesList.map((row, i) => (
+                <div key={i} className="flex flex-wrap gap-2 items-start mb-2 p-2 bg-dark-bg border border-dark-border rounded">
+                  <span className="text-gray-500 text-sm mt-2">{`{{`}</span>
+                  <input
+                    placeholder="Variable_name"
+                    value={row.variableName}
+                    onChange={(e) =>
+                      setChunkQueryVariablesList((prev) =>
+                        prev.map((r, j) => (j === i ? { ...r, variableName: e.target.value } : r))
+                      )
+                    }
+                    className="w-36 px-2 py-1.5 bg-dark-secondary border border-dark-border rounded text-white text-sm placeholder-gray-500"
+                  />
+                  <span className="text-gray-500 text-sm mt-2">{`}}`}</span>
+                  <input
+                    list={`doc-labels-${i}`}
+                    placeholder="Document label (e.g. Pricing)"
+                    value={row.documentLabel}
+                    onChange={(e) =>
+                      setChunkQueryVariablesList((prev) =>
+                        prev.map((r, j) => (j === i ? { ...r, documentLabel: e.target.value } : r))
+                      )
+                    }
+                    className="w-32 px-2 py-1.5 bg-dark-secondary border border-dark-border rounded text-white text-sm placeholder-gray-500"
+                  />
+                  <datalist id={`doc-labels-${i}`}>
+                    {[...new Set(kbDocuments.map((d) => d.label).filter(Boolean))].map((l) => (
+                      <option key={l!} value={l!} />
+                    ))}
+                  </datalist>
+                  <input
+                    placeholder="Instruction query (e.g. show pricing that incentivises yearly vs monthly)"
+                    value={row.query}
+                    onChange={(e) =>
+                      setChunkQueryVariablesList((prev) =>
+                        prev.map((r, j) => (j === i ? { ...r, query: e.target.value } : r))
+                      )
+                    }
+                    className="flex-1 min-w-[200px] px-2 py-1.5 bg-dark-secondary border border-dark-border rounded text-white text-sm placeholder-gray-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setChunkQueryVariablesList((prev) => prev.filter((_, j) => j !== i))
+                    }
+                    className="text-red-400 hover:text-red-300 text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  setChunkQueryVariablesList((prev) => [...prev, { variableName: "", documentLabel: "", query: "" }])
+                }
+                className="text-sm text-accent-primary hover:underline"
+              >
+                + Add labeled variable
+              </button>
+            </div>
             <div>
               <input
                 placeholder="Subject line (e.g. Hi {{First_Name}}, we have something for you)"

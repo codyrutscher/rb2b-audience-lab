@@ -31,6 +31,8 @@ export interface CopyGenerationInput {
   customPrompt?: string | null;
   /** Extra variables from pixel fields (e.g. company_name, job_title) for {{variable}} in custom prompt */
   extraVariables?: Record<string, string>;
+  /** Variable names filled by KB retrieval (e.g. Pricing, casestudy); model may use {{Pricing}}, {{casestudy}} */
+  chunkQueryVariableNames?: string[];
 }
 
 /** Reserved template variables that trigger structured output (Headline, Sub_Heading, Bullet_Point, CTA). */
@@ -67,12 +69,21 @@ const FORBIDDEN_LABELS = [
   "AIDA:",
 ];
 
-/** Build the list of allowed {{variable}} names from template + extraVariables (for model guidelines). */
-function getAllowedVariableNames(template: string, extraVariables?: Record<string, string> | null): string[] {
+/** Build the list of allowed {{variable}} names from template + extraVariables + chunkQueryVariableNames (for model guidelines). */
+function getAllowedVariableNames(
+  template: string,
+  extraVariables?: Record<string, string> | null,
+  chunkQueryVariableNames?: string[] | null
+): string[] {
   const allowed = new Set<string>(["First_Name", "first_name"]);
   if (extraVariables && typeof extraVariables === "object") {
     for (const k of Object.keys(extraVariables)) {
       if (k && !STRUCTURE_VARS.some((v) => v.toLowerCase() === k.toLowerCase())) allowed.add(k);
+    }
+  }
+  if (chunkQueryVariableNames?.length) {
+    for (const k of chunkQueryVariableNames) {
+      if (k?.trim() && !STRUCTURE_VARS.some((v) => v.toLowerCase() === k.toLowerCase())) allowed.add(k.trim());
     }
   }
   const varMatches = template.matchAll(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g);
@@ -86,7 +97,7 @@ function getAllowedVariableNames(template: string, extraVariables?: Record<strin
 /** Guidelines appended to the prompt so the model only uses allowed variables and no instruction labels. */
 function buildCopyGuidelines(input: CopyGenerationInput): string {
   const template = input.customPrompt?.trim() || DEFAULT_PROMPT;
-  const allowed = getAllowedVariableNames(template, input.extraVariables);
+  const allowed = getAllowedVariableNames(template, input.extraVariables, input.chunkQueryVariableNames);
   const varList = allowed.length ? allowed.map((v) => `{{${v}}}`).join(", ") : "{{First_Name}}";
   return `
 

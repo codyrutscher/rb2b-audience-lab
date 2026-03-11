@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountIdFromRequest } from "@/lib/reactivate/auth";
 import { generateCopy } from "@/lib/reactivate/copyGeneration";
-import { retrieveChunks } from "@/lib/reactivate/retrieval";
+import { retrieveChunks, retrieveChunksFromQueries, parseQueryHints } from "@/lib/reactivate/retrieval";
 import { prisma } from "@/lib/reactivate/db";
 
 export async function POST(request: NextRequest) {
@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
   const {
     knowledge_bank_id,
     query,
+    queries,
     first_name,
     cta_label,
     query_hint,
@@ -22,10 +23,20 @@ export async function POST(request: NextRequest) {
   } = body;
   const knowledgeBankId =
     typeof knowledge_bank_id === "string" ? knowledge_bank_id.trim() : "";
-  const queryText = typeof query === "string" ? query.trim() : "";
-  if (!knowledgeBankId || !queryText) {
+  const singleQuery = typeof query === "string" ? query.trim() : "";
+  const queryList = Array.isArray(queries)
+    ? (queries as unknown[]).map((q) => String(q).trim()).filter(Boolean)
+    : parseQueryHints(singleQuery || (typeof query_hint === "string" ? query_hint : ""));
+  const useMultiple = queryList.length > 1;
+  if (!knowledgeBankId) {
     return NextResponse.json(
-      { error: "knowledge_bank_id and query are required" },
+      { error: "knowledge_bank_id is required" },
+      { status: 400 }
+    );
+  }
+  if (!singleQuery && queryList.length === 0) {
+    return NextResponse.json(
+      { error: "query or queries (array) are required" },
       { status: 400 }
     );
   }
@@ -38,12 +49,23 @@ export async function POST(request: NextRequest) {
   try {
     let chunks: { id: string; text: string; score?: number }[];
     try {
-      chunks = await retrieveChunks({
-        accountId,
-        knowledgeBankId,
-        queryText: query,
-        topK: typeof top_k === "number" ? top_k : 8,
-      });
+      if (useMultiple) {
+        chunks = await retrieveChunksFromQueries({
+          accountId,
+          knowledgeBankId,
+          queryTexts: queryList,
+          topKPerQuery: 4,
+          maxTotalChunks: typeof top_k === "number" ? top_k : 16,
+        });
+      } else {
+        const q = queryList[0] ?? singleQuery;
+        chunks = await retrieveChunks({
+          accountId,
+          knowledgeBankId,
+          queryText: q,
+          topK: typeof top_k === "number" ? top_k : 8,
+        });
+      }
     } catch (retrievalErr) {
       const msg = retrievalErr instanceof Error ? retrievalErr.message : String(retrievalErr);
       console.error("[copy-with-retrieval] retrieval failed:", msg);
@@ -75,7 +97,7 @@ export async function POST(request: NextRequest) {
     }
     const payload: Record<string, unknown> = {
       retrieved_text: retrievedText,
-      retrieved_preview: retrievedText.slice(0, 400) + (retrievedText.length > 400 ? "…" : ""),
+      retrieved_preview: retrievedText.slice(0, 3500) + (retrievedText.length > 3500 ? "…" : ""),
       chunks: chunks.length,
       copy: result.copy,
     };

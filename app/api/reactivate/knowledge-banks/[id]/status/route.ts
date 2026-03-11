@@ -15,7 +15,7 @@ export async function GET(
     where: { id, accountId },
     include: {
       documents: {
-        select: { id: true, filename: true, status: true, createdAt: true },
+        select: { id: true, filename: true, label: true, status: true, createdAt: true },
         orderBy: { createdAt: "desc" },
       },
     },
