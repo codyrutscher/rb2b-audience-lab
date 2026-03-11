@@ -2,10 +2,16 @@
 (function() {
   'use strict';
   
-  // Get workspace ID from script tag
+  // Get script tag attributes
   var scripts = document.getElementsByTagName('script');
   var currentScript = scripts[scripts.length - 1];
   var workspaceId = currentScript.getAttribute('data-workspace-id');
+  
+  // Get the base URL from the script src
+  var scriptSrc = currentScript.src;
+  var baseUrl = scriptSrc.substring(0, scriptSrc.lastIndexOf('/'));
+  // Remove /track.js or similar from the end to get the domain
+  baseUrl = scriptSrc.replace(/\/track\.js.*$/, '');
   
   // State management
   var state = {
@@ -146,7 +152,8 @@
 
   // Send tracking data
   function sendData(endpoint, data) {
-    return fetch(endpoint, {
+    var url = baseUrl + endpoint;
+    return fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -195,7 +202,7 @@
 
     // Use sendBeacon for reliable exit tracking
     if (navigator.sendBeacon) {
-      navigator.sendBeacon('/api/page-exit', JSON.stringify(data));
+      navigator.sendBeacon(baseUrl + '/api/page-exit', JSON.stringify(data));
     } else {
       sendData('/api/page-exit', data);
     }
