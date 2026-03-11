@@ -74,7 +74,9 @@ export async function POST(request: NextRequest) {
   let audiencelabPixelId: string | null = null;
   let audiencelabInstallUrl: string | null = null;
   let apiKeyToStore: string | null = null;
-  const apiKey = audiencelab_api_key?.trim() || process.env.AUDIENCELAB_API_KEY?.trim();
+  
+  // Only use Audiencelab if an API key is explicitly provided
+  const apiKey = audiencelab_api_key?.trim();
 
   if (apiKey) {
     try {
@@ -89,7 +91,7 @@ export async function POST(request: NextRequest) {
       );
       audiencelabPixelId = created.id ?? created.pixel_id ?? null;
       audiencelabInstallUrl = (created.install_url as string) || null;
-      apiKeyToStore = audiencelab_api_key?.trim() || null;
+      apiKeyToStore = apiKey;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[POST /api/reactivate/pixels] Audiencelab API error:", msg);

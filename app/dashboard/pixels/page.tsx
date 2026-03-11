@@ -211,8 +211,14 @@ export default function PixelsPage() {
   }
 
   function copyInstallScript(pixel: Pixel) {
-    if (!pixel.audiencelabInstallUrl) return;
-    const script = `<script src="${pixel.audiencelabInstallUrl}" async></script>`;
+    let script: string;
+    if (pixel.audiencelabInstallUrl) {
+      script = `<script src="${pixel.audiencelabInstallUrl}" async></script>`;
+    } else {
+      // Use our own tracking script with workspace ID
+      const baseUrl = window.location.origin;
+      script = `<script src="${baseUrl}/track.js" data-workspace-id="${pixel.id}" async></script>`;
+    }
     navigator.clipboard.writeText(script);
     setCopiedId(pixel.id);
     setTimeout(() => setCopiedId(null), 2000);
@@ -370,24 +376,22 @@ export default function PixelsPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  {pixel.audiencelabInstallUrl && (
-                    <button
-                      onClick={() => copyInstallScript(pixel)}
-                      className="flex items-center gap-2 px-3 py-2 bg-dark-tertiary text-gray-300 rounded-lg text-sm hover:bg-dark-border transition"
-                    >
-                      {copiedId === pixel.id ? (
-                        <>
-                          <Check className="w-4 h-4 text-green-400" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4" />
-                          Copy Script
-                        </>
-                      )}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => copyInstallScript(pixel)}
+                    className="flex items-center gap-2 px-3 py-2 bg-dark-tertiary text-gray-300 rounded-lg text-sm hover:bg-dark-border transition"
+                  >
+                    {copiedId === pixel.id ? (
+                      <>
+                        <Check className="w-4 h-4 text-green-400" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copy Script
+                      </>
+                    )}
+                  </button>
                   {pixel.canFetch && (
                     <button
                       onClick={() => fetchPixelData(pixel.id)}
