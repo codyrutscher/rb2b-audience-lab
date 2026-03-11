@@ -3,6 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 import { lookupIPWithFallback } from '@/lib/ip-lookup';
 import { sendVisitorNotifications } from '@/lib/notifications';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -12,6 +18,11 @@ function getSupabaseClient() {
   }
   
   return createClient(supabaseUrl, supabaseKey);
+}
+
+// Handle CORS preflight
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
 }
 
 export async function POST(request: NextRequest) {
@@ -123,9 +134,9 @@ export async function POST(request: NextRequest) {
       referrer,
     });
 
-    return NextResponse.json({ success: true, visitorId: visitor.id });
+    return NextResponse.json({ success: true, visitorId: visitor.id }, { headers: corsHeaders });
   } catch (error) {
     console.error('Tracking error:', error);
-    return NextResponse.json({ error: 'Tracking failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Tracking failed' }, { status: 500, headers: corsHeaders });
   }
 }
