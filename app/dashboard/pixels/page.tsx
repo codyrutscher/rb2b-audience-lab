@@ -304,16 +304,6 @@ export default function PixelsPage() {
                   className="w-full px-4 py-2.5 bg-dark-tertiary border border-dark-border rounded-lg text-white placeholder-gray-500 focus:border-accent-primary focus:outline-none"
                 />
               </div>
-              <div className="md:col-span-2">
-                <label className="text-gray-400 text-sm block mb-1">Audiencelab API Key (optional)</label>
-                <input
-                  type="text"
-                  value={pixelApiKey}
-                  onChange={(e) => setPixelApiKey(e.target.value)}
-                  placeholder="Your API key for Audiencelab integration"
-                  className="w-full px-4 py-2.5 bg-dark-tertiary border border-dark-border rounded-lg text-white placeholder-gray-500 focus:border-accent-primary focus:outline-none"
-                />
-              </div>
             </div>
             <div className="flex gap-3 mt-6">
               <button
