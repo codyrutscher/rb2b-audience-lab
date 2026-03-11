@@ -31,7 +31,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
-  { href: "/dashboard/install", label: "Install", icon: <Code className="w-5 h-5" /> },
+  { href: "/dashboard/pixels", label: "Pixels", icon: <Code className="w-5 h-5" /> },
   { href: "/dashboard/activity", label: "Activity", icon: <Activity className="w-5 h-5" /> },
   { href: "/dashboard/analytics", label: "Analytics", icon: <BarChart3 className="w-5 h-5" /> },
   { href: "/dashboard/segments", label: "Segments", icon: <Filter className="w-5 h-5" /> },
