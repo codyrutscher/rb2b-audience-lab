@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 export async function GET() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const databaseUrl = process.env.DATABASE_URL;
 
   const checks: Record<string, any> = {
@@ -13,12 +14,16 @@ export async function GET() {
       NEXT_PUBLIC_SUPABASE_ANON_KEY: supabaseAnonKey 
         ? `${supabaseAnonKey.substring(0, 20)}...${supabaseAnonKey.substring(supabaseAnonKey.length - 10)}` 
         : "NOT SET",
+      SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey
+        ? `${supabaseServiceKey.substring(0, 20)}...${supabaseServiceKey.substring(supabaseServiceKey.length - 10)}`
+        : "NOT SET",
       DATABASE_URL: databaseUrl 
         ? `${databaseUrl.substring(0, 40)}...` 
         : "NOT SET",
     },
     supabase_url_project: null,
     anon_key_project: null,
+    service_key_project: null,
     database_url_project: null,
     mismatch: false,
   };
@@ -45,6 +50,22 @@ export async function GET() {
     }
   }
 
+  // Extract project ID from service role key
+  if (supabaseServiceKey) {
+    try {
+      const payload = JSON.parse(atob(supabaseServiceKey.split('.')[1]));
+      checks.service_key_project = payload.ref || "NOT FOUND IN TOKEN";
+      checks.service_key_details = {
+        iss: payload.iss,
+        ref: payload.ref,
+        role: payload.role,
+        exp: payload.exp ? new Date(payload.exp * 1000).toISOString() : null,
+      };
+    } catch (e) {
+      checks.service_key_project = "FAILED TO DECODE";
+    }
+  }
+
   // Extract project ID from DATABASE_URL
   if (databaseUrl) {
     const dbMatch = databaseUrl.match(/postgres(?:ql)?:\/\/postgres\.([^:]+):/);
@@ -57,7 +78,7 @@ export async function GET() {
   }
 
   // Check for mismatches
-  const projects = [checks.supabase_url_project, checks.anon_key_project, checks.database_url_project].filter(Boolean);
+  const projects = [checks.supabase_url_project, checks.anon_key_project, checks.service_key_project, checks.database_url_project].filter(Boolean);
   const uniqueProjects = [...new Set(projects)];
   if (uniqueProjects.length > 1) {
     checks.mismatch = true;
