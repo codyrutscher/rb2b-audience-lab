@@ -102,39 +102,42 @@ function SegmentRuleBuilder({
   return (
     <div className="glass neon-border rounded-xl overflow-hidden">
       <div className="p-6 border-b border-dark-border bg-dark-tertiary/30">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-white">{segment.name}</h2>
             <p className="text-sm text-gray-400 mt-1">
               {segment.pixel ? `${segment.pixel.name} - ${segment.pixel.websiteName}` : "All Pixels"}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {previewResult && (
               <>
                 <button
                   onClick={onToggleTable}
-                  className="flex items-center gap-2 px-4 py-2 bg-dark-tertiary border border-dark-border text-white rounded-lg hover:bg-dark-secondary transition"
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-dark-tertiary border border-dark-border text-white rounded-lg hover:bg-dark-secondary transition text-sm"
                 >
                   <Table className="w-4 h-4" />
-                  {showTableView ? "Hide Table" : "Show Table"}
+                  <span className="hidden sm:inline">{showTableView ? "Hide Table" : "Show Table"}</span>
+                  <span className="sm:hidden">Table</span>
                 </button>
                 <button
                   onClick={onExport}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm"
                 >
                   <Download className="w-4 h-4" />
-                  Export CSV
+                  <span className="hidden sm:inline">Export CSV</span>
+                  <span className="sm:hidden">Export</span>
                 </button>
               </>
             )}
             <button
               onClick={onPreview}
               disabled={previewing}
-              className="flex items-center gap-2 px-4 py-2 bg-accent-secondary text-white rounded-lg hover:shadow-lg hover:shadow-accent-secondary/30 transition disabled:opacity-50"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-accent-secondary text-white rounded-lg hover:shadow-lg hover:shadow-accent-secondary/30 transition disabled:opacity-50 text-sm"
             >
               <Eye className="w-4 h-4" />
-              {previewing ? "Loading..." : "Preview"}
+              <span className="hidden sm:inline">{previewing ? "Loading..." : "Preview"}</span>
+              <span className="sm:hidden">{previewing ? "..." : "Preview"}</span>
             </button>
           </div>
         </div>
@@ -623,17 +626,18 @@ export default function SegmentsPage() {
   return (
     <div className="p-8">
       <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Segments</h1>
             <p className="text-gray-400">Create rule-based segments to target specific visitors</p>
           </div>
           <button
             onClick={() => setShowCreateForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-purple text-white rounded-lg font-medium hover:shadow-lg hover:shadow-accent-primary/30 transition"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-purple text-white rounded-lg font-medium hover:shadow-lg hover:shadow-accent-primary/30 transition whitespace-nowrap"
           >
             <Plus className="w-5 h-5" />
-            New Segment
+            <span className="hidden sm:inline">New Segment</span>
+            <span className="sm:hidden">New</span>
           </button>
         </div>
 
@@ -686,9 +690,9 @@ export default function SegmentsPage() {
           </div>
         )}
 
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* Segment List */}
-          <div className="w-1/3">
+          <div className="w-full lg:w-1/3">
             <div className="glass neon-border rounded-xl overflow-hidden">
               <div className="p-4 border-b border-dark-border bg-dark-tertiary/30">
                 <h2 className="text-lg font-semibold text-white mb-3">Your Segments</h2>
@@ -745,7 +749,7 @@ export default function SegmentsPage() {
           </div>
 
           {/* Rule Builder */}
-          <div className="w-2/3">
+          <div className="w-full lg:w-2/3">
             {selectedSegment ? (
               <SegmentRuleBuilder
                 segment={selectedSegment}
