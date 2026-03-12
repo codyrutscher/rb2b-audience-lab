@@ -44,6 +44,7 @@ model RtPixel {
   updatedAt            DateTime @updatedAt @map("updated_at")
   contactEvents       RtContactEvent[]
   schedule             RtPixelSchedule?
+  segments             RtSegment[]
 
   @@map("rt_pixels")
 }
@@ -149,6 +150,8 @@ model RtSegment {
   id            String   @id @default(uuid())
   accountId     String   @map("account_id")
   account       RtAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  pixelId       String?  @map("pixel_id")
+  pixel         RtPixel? @relation(fields: [pixelId], references: [id], onDelete: Cascade)
   name          String
   priority      Int      @default(999)
   isSuppression        Boolean  @default(false) @map("is_suppression")

@@ -27,6 +27,8 @@ type RtSegment = {
   priority: number;
   isSuppression: boolean;
   enabled: boolean;
+  pixelId?: string | null;
+  pixel?: { id: string; name: string; websiteName: string } | null;
   rules: SegmentRule[];
   ruleGroups?: RuleGroup[];
 };
@@ -300,16 +302,35 @@ function SegmentRuleBuilder({
         {/* Preview Results */}
         {previewResult && (
           <div className="p-4 bg-green-500/5 border border-green-500/20 rounded-lg">
-            <div className="text-sm font-medium text-green-300 mb-2">
-              Preview: {previewResult.count} visitors match this segment
+            <div className="text-sm font-medium text-green-300 mb-3">
+              {previewResult.count} visitors match this segment
             </div>
             {previewResult.sample.length > 0 && (
-              <div className="space-y-2 mt-3">
-                {previewResult.sample.slice(0, 3).map((v: any) => (
-                  <div key={v.id} className="text-xs text-gray-400 p-2 bg-dark-secondary rounded">
-                    {v.email || v.company || v.city || "Anonymous"} - {v.page_views} views
-                  </div>
+              <div className="space-y-2">
+                {previewResult.sample.slice(0, 5).map((v: any) => (
+                  <a
+                    key={v.id}
+                    href={`/dashboard/visitors/${v.id}`}
+                    className="block p-3 bg-dark-secondary rounded-lg hover:bg-dark-tertiary transition border border-dark-border"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-white font-medium">
+                          {v.email || v.company || v.name || "Anonymous Visitor"}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {v.city && v.country ? `${v.city}, ${v.country}` : v.country || "Unknown location"} • {v.page_views} views
+                        </div>
+                      </div>
+                      <div className="text-xs text-accent-primary">View →</div>
+                    </div>
+                  </a>
                 ))}
+                {previewResult.count > 5 && (
+                  <div className="text-xs text-gray-500 text-center pt-2">
+                    + {previewResult.count - 5} more visitors
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -321,28 +342,49 @@ function SegmentRuleBuilder({
 
 export default function SegmentsPage() {
   const [segments, setSegments] = useState<RtSegment[]>([]);
+  const [pixels, setPixels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSegment, setSelectedSegment] = useState<RtSegment | null>(null);
   const [segmentFields, setSegmentFields] = useState<{ fields: string[]; operators: string[] }>({ fields: [], operators: [] });
+  const [selectedPixelFilter, setSelectedPixelFilter] = useState<string>("");
   
   // Create segment form
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newSegmentName, setNewSegmentName] = useState("");
+  const [newSegmentPixelId, setNewSegmentPixelId] = useState("");
   
   // Preview
   const [previewing, setPreviewing] = useState(false);
   const [previewResult, setPreviewResult] = useState<{ count: number; sample: any[] } | null>(null);
 
   useEffect(() => {
+    loadPixels();
     loadSegments();
     loadFields();
   }, []);
 
+  useEffect(() => {
+    loadSegments();
+  }, [selectedPixelFilter]);
+
+  async function loadPixels() {
+    try {
+      const res = await fetch(`${API_BASE}/pixels`, { credentials: "include" });
+      if (res.ok) {
+        const d = await res.json();
+        setPixels(d.pixels || []);
+      }
+    } catch {}
+  }
+
   async function loadSegments() {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/segments`, { credentials: "include" });
+      const url = selectedPixelFilter 
+        ? `${API_BASE}/segments?pixel_id=${selectedPixelFilter}`
+        : `${API_BASE}/segments`;
+      const res = await fetch(url, { credentials: "include" });
       if (res.ok) {
         const d = await res.json();
         setSegments(d.segments || []);
@@ -368,9 +410,14 @@ export default function SegmentsPage() {
     try {
       await fetchApi("/segments", {
         method: "POST",
-        body: JSON.stringify({ name: newSegmentName.trim(), priority: 999 }),
+        body: JSON.stringify({ 
+          name: newSegmentName.trim(), 
+          priority: 999,
+          pixel_id: newSegmentPixelId || null
+        }),
       });
       setNewSegmentName("");
+      setNewSegmentPixelId("");
       setShowCreateForm(false);
       loadSegments();
     } catch (e) {
@@ -491,9 +538,19 @@ export default function SegmentsPage() {
                 value={newSegmentName}
                 onChange={(e) => setNewSegmentName(e.target.value)}
                 placeholder="Segment name (e.g., High-Value Leads)"
-                className="w-full px-4 py-3 bg-dark-tertiary border border-dark-border rounded-lg text-white placeholder-gray-500 focus:border-accent-primary focus:outline-none mb-4"
+                className="w-full px-4 py-3 bg-dark-tertiary border border-dark-border rounded-lg text-white placeholder-gray-500 focus:border-accent-primary focus:outline-none mb-3"
                 autoFocus
               />
+              <select
+                value={newSegmentPixelId}
+                onChange={(e) => setNewSegmentPixelId(e.target.value)}
+                className="w-full px-4 py-3 bg-dark-tertiary border border-dark-border rounded-lg text-white mb-4"
+              >
+                <option value="">All Pixels (Workspace-level)</option>
+                {pixels.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name} - {p.websiteName}</option>
+                ))}
+              </select>
               <div className="flex gap-3">
                 <button
                   onClick={createSegment}
@@ -503,7 +560,7 @@ export default function SegmentsPage() {
                   Create
                 </button>
                 <button
-                  onClick={() => { setShowCreateForm(false); setNewSegmentName(""); }}
+                  onClick={() => { setShowCreateForm(false); setNewSegmentName(""); setNewSegmentPixelId(""); }}
                   className="px-4 py-2 text-gray-400 hover:text-white"
                 >
                   Cancel
@@ -518,7 +575,17 @@ export default function SegmentsPage() {
           <div className="w-1/3">
             <div className="glass neon-border rounded-xl overflow-hidden">
               <div className="p-4 border-b border-dark-border bg-dark-tertiary/30">
-                <h2 className="text-lg font-semibold text-white">Your Segments</h2>
+                <h2 className="text-lg font-semibold text-white mb-3">Your Segments</h2>
+                <select
+                  value={selectedPixelFilter}
+                  onChange={(e) => setSelectedPixelFilter(e.target.value)}
+                  className="w-full px-3 py-2 bg-dark-secondary border border-dark-border rounded text-white text-sm"
+                >
+                  <option value="">All Pixels</option>
+                  {pixels.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
               </div>
               {segments.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
@@ -538,8 +605,11 @@ export default function SegmentsPage() {
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <div>
+                        <div className="flex-1">
                           <div className="font-medium text-white">{s.name}</div>
+                          {s.pixel && (
+                            <div className="text-xs text-accent-secondary mt-1">{s.pixel.name}</div>
+                          )}
                           <div className="text-xs text-gray-500 mt-1">
                             {(s.rules?.length || 0) + (s.ruleGroups?.reduce((acc, g) => acc + g.rules.length, 0) || 0)} rules
                           </div>
