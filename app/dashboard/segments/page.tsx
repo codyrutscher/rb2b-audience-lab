@@ -131,6 +131,13 @@ function SegmentRuleBuilder({
               </>
             )}
             <button
+              onClick={() => window.open(`/api/reactivate/segments/${segment.id}/debug`, '_blank')}
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition text-sm"
+              title="Open debug info in new tab"
+            >
+              🐛 Debug
+            </button>
+            <button
               onClick={onPreview}
               disabled={previewing}
               className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-accent-secondary text-white rounded-lg hover:shadow-lg hover:shadow-accent-secondary/30 transition disabled:opacity-50 text-sm"
@@ -733,6 +740,7 @@ export default function SegmentsPage() {
                           <div className="text-xs text-gray-500 mt-1">
                             {(s.rules?.length || 0) + (s.ruleGroups?.reduce((acc, g) => acc + g.rules.length, 0) || 0)} rules
                           </div>
+                          <div className="text-xs text-gray-600 mt-1 font-mono">ID: {s.id.slice(0, 8)}...</div>
                         </div>
                         <button
                           onClick={(e) => { e.stopPropagation(); deleteSegment(s.id); }}
