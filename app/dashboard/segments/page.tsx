@@ -229,13 +229,13 @@ function SegmentRuleBuilder({
               {/* Add Rule to Group */}
               <div className="mt-3 p-3 bg-dark-secondary/50 rounded-lg border border-dashed border-accent-primary/30">
                 <div className="text-xs font-medium text-gray-400 mb-2">Add rule to this {group.logicalOp} group</div>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
                   <select
                     value={newRule.groupId === group.id ? newRule.field : ""}
                     onChange={(e) => setNewRule({ ...newRule, field: e.target.value, groupId: group.id })}
-                    className="flex-1 px-3 py-2 bg-dark-tertiary border border-dark-border rounded text-white text-sm"
+                    className="md:col-span-4 px-2 py-1.5 bg-dark-tertiary border border-dark-border rounded text-white text-xs"
                   >
-                    <option value="">Select field...</option>
+                    <option value="">Field...</option>
                     {fields.map((f) => (
                       <option key={f} value={f}>{f}</option>
                     ))}
@@ -243,9 +243,9 @@ function SegmentRuleBuilder({
                   <select
                     value={newRule.groupId === group.id ? newRule.operator : ""}
                     onChange={(e) => setNewRule({ ...newRule, operator: e.target.value, groupId: group.id })}
-                    className="px-3 py-2 bg-dark-tertiary border border-dark-border rounded text-white text-sm"
+                    className="md:col-span-3 px-2 py-1.5 bg-dark-tertiary border border-dark-border rounded text-white text-xs"
                   >
-                    <option value="">Operator...</option>
+                    <option value="">Op...</option>
                     {operators.map((op) => (
                       <option key={op} value={op}>{op}</option>
                     ))}
@@ -255,12 +255,12 @@ function SegmentRuleBuilder({
                     value={newRule.groupId === group.id ? newRule.value : ""}
                     onChange={(e) => setNewRule({ ...newRule, value: e.target.value, groupId: group.id })}
                     placeholder="Value..."
-                    className="flex-1 px-3 py-2 bg-dark-tertiary border border-dark-border rounded text-white text-sm placeholder-gray-600"
+                    className="md:col-span-3 px-2 py-1.5 bg-dark-tertiary border border-dark-border rounded text-white text-xs placeholder-gray-600"
                   />
                   <button
                     onClick={handleAddRule}
                     disabled={!newRule.field || !newRule.operator || addingRule || newRule.groupId !== group.id}
-                    className="px-4 py-2 bg-accent-primary text-white rounded text-sm font-medium disabled:opacity-50"
+                    className="md:col-span-2 px-3 py-1.5 bg-accent-primary text-white rounded text-xs font-medium disabled:opacity-50"
                   >
                     Add
                   </button>
@@ -271,15 +271,15 @@ function SegmentRuleBuilder({
         ))}
 
         {/* Add Base Rule (ungrouped) */}
-        <div className="p-4 bg-dark-tertiary/30 rounded-lg border border-dashed border-dark-border">
-          <div className="text-sm font-medium text-gray-400 mb-3">Add Base Rule (applies to all visitors)</div>
-          <div className="flex gap-2">
+        <div className="p-3 bg-dark-tertiary/30 rounded-lg border border-dashed border-dark-border">
+          <div className="text-xs font-medium text-gray-400 mb-2">Add Base Rule (applies to all visitors)</div>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
             <select
               value={!newRule.groupId ? newRule.field : ""}
               onChange={(e) => setNewRule({ ...newRule, field: e.target.value, groupId: "" })}
-              className="flex-1 px-3 py-2 bg-dark-secondary border border-dark-border rounded text-white text-sm"
+              className="md:col-span-4 px-2 py-1.5 bg-dark-secondary border border-dark-border rounded text-white text-xs"
             >
-              <option value="">Select field...</option>
+              <option value="">Field...</option>
               {fields.map((f) => (
                 <option key={f} value={f}>{f}</option>
               ))}
@@ -287,9 +287,9 @@ function SegmentRuleBuilder({
             <select
               value={!newRule.groupId ? newRule.operator : ""}
               onChange={(e) => setNewRule({ ...newRule, operator: e.target.value, groupId: "" })}
-              className="px-3 py-2 bg-dark-secondary border border-dark-border rounded text-white text-sm"
+              className="md:col-span-3 px-2 py-1.5 bg-dark-secondary border border-dark-border rounded text-white text-xs"
             >
-              <option value="">Operator...</option>
+              <option value="">Op...</option>
               {operators.map((op) => (
                 <option key={op} value={op}>{op}</option>
               ))}
@@ -299,12 +299,12 @@ function SegmentRuleBuilder({
               value={!newRule.groupId ? newRule.value : ""}
               onChange={(e) => setNewRule({ ...newRule, value: e.target.value, groupId: "" })}
               placeholder="Value..."
-              className="flex-1 px-3 py-2 bg-dark-secondary border border-dark-border rounded text-white text-sm placeholder-gray-600"
+              className="md:col-span-3 px-2 py-1.5 bg-dark-secondary border border-dark-border rounded text-white text-xs placeholder-gray-600"
             />
             <button
               onClick={handleAddRule}
               disabled={!newRule.field || !newRule.operator || addingRule || !!newRule.groupId}
-              className="px-4 py-2 bg-accent-primary text-white rounded text-sm font-medium disabled:opacity-50"
+              className="md:col-span-2 px-3 py-1.5 bg-accent-primary text-white rounded text-xs font-medium disabled:opacity-50"
             >
               Add
             </button>
