@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { 
       sessionId, 
-      workspaceId, 
+      workspaceId, // This can be either a workspace ID or a pixel ID
       url, 
       title, 
       referrer,
@@ -56,6 +56,34 @@ export async function POST(request: NextRequest) {
     // Lookup IP geolocation
     const ipInfo = await lookupIPWithFallback(ip);
 
+    // Resolve workspace ID - check if workspaceId is actually a pixel ID
+    let resolvedWorkspaceId = workspaceId;
+    let pixelId: string | null = null;
+    
+    if (workspaceId) {
+      // First check if it's a pixel ID by looking up rt_pixels
+      const { data: pixel } = await supabase
+        .from('rt_pixels')
+        .select('id, account_id')
+        .eq('id', workspaceId)
+        .single();
+      
+      if (pixel) {
+        // It's a pixel ID - get the workspace from the account
+        pixelId = pixel.id;
+        const { data: account } = await supabase
+          .from('rt_accounts')
+          .select('workspace_id')
+          .eq('id', pixel.account_id)
+          .single();
+        
+        if (account) {
+          resolvedWorkspaceId = account.workspace_id;
+        }
+      }
+      // If not found as pixel, assume it's already a workspace ID
+    }
+
     // Check if visitor exists
     let { data: visitor } = await supabase
       .from('visitors')
@@ -69,7 +97,8 @@ export async function POST(request: NextRequest) {
         .from('visitors')
         .insert({
           session_id: sessionId,
-          workspace_id: workspaceId || null,
+          workspace_id: resolvedWorkspaceId || null,
+          pixel_id: pixelId,
           ip_address: ip,
           user_agent: userAgent,
           page_views: 1,
@@ -98,8 +127,8 @@ export async function POST(request: NextRequest) {
       visitor = newVisitor;
 
       // Send notifications for new visitors
-      if (workspaceId) {
-        await sendVisitorNotifications(workspaceId, {
+      if (resolvedWorkspaceId) {
+        await sendVisitorNotifications(resolvedWorkspaceId, {
           visitorId: newVisitor.id,
           name: newVisitor.name,
           email: newVisitor.email,

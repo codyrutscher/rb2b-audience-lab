@@ -1,18 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { supabase, type Visitor } from "@/lib/supabase";
-import { Users, TrendingUp, Clock, Search, Download } from "lucide-react";
+import { Users, TrendingUp, Clock, Search, Download, Globe } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { getCurrentUser } from "@/lib/supabase-auth";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
+type Pixel = {
+  id: string;
+  name: string;
+  websiteName: string;
+  websiteUrl: string;
+};
+
 export default function Dashboard() {
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [filteredVisitors, setFilteredVisitors] = useState<Visitor[]>([]);
+  const [pixels, setPixels] = useState<Pixel[]>([]);
+  const [selectedPixel, setSelectedPixel] = useState<string>('all');
   const [stats, setStats] = useState({
     total: 0,
     identified: 0,
@@ -23,6 +32,50 @@ export default function Dashboard() {
   const [filterDevice, setFilterDevice] = useState<'all' | 'mobile' | 'desktop'>('all');
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+
+  // Load pixels for the filter dropdown
+  useEffect(() => {
+    async function loadPixels() {
+      try {
+        const res = await fetch('/api/reactivate/pixels', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setPixels(data.pixels || []);
+        }
+      } catch (e) {
+        console.error('Failed to load pixels:', e);
+      }
+    }
+    loadPixels();
+  }, []);
+
+  const loadVisitors = useCallback(async () => {
+    let query = supabase
+      .from('visitors')
+      .select('*')
+      .order('last_seen', { ascending: false })
+      .limit(50);
+
+    // Filter by pixel if selected
+    if (selectedPixel !== 'all') {
+      query = query.eq('pixel_id', selectedPixel);
+    }
+
+    const { data } = await query;
+
+    if (data) {
+      setVisitors(data);
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      setStats({
+        total: data.length,
+        identified: data.filter((v: Visitor) => v.identified).length,
+        today: data.filter((v: Visitor) => new Date(v.first_seen) >= today).length,
+      });
+    }
+  }, [selectedPixel]);
 
   useEffect(() => {
     loadVisitors();
@@ -38,32 +91,11 @@ export default function Dashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [loadVisitors]);
 
   useEffect(() => {
     applyFilters();
   }, [visitors, searchTerm, filterIdentified, filterDevice]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function loadVisitors() {
-    const { data } = await supabase
-      .from('visitors')
-      .select('*')
-      .order('last_seen', { ascending: false })
-      .limit(50);
-
-    if (data) {
-      setVisitors(data);
-      
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      setStats({
-        total: data.length,
-        identified: data.filter(v => v.identified).length,
-        today: data.filter(v => new Date(v.first_seen) >= today).length,
-      });
-    }
-  }
 
   function applyFilters() {
     let filtered = [...visitors];
@@ -207,6 +239,19 @@ export default function Dashboard() {
         {/* Search and Filters */}
         <div className="glass neon-border rounded-xl p-4 mb-6">
           <div className="flex flex-wrap gap-4">
+            {/* Website/Pixel Filter */}
+            {pixels.length > 0 && (
+              <select
+                value={selectedPixel}
+                onChange={(e) => setSelectedPixel(e.target.value)}
+                className="px-4 py-2 bg-dark-tertiary border border-dark-border rounded-lg text-white focus:border-accent-primary focus:outline-none transition"
+              >
+                <option value="all">All Websites</option>
+                {pixels.map(p => (
+                  <option key={p.id} value={p.id}>{p.websiteName || p.name}</option>
+                ))}
+              </select>
+            )}
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
