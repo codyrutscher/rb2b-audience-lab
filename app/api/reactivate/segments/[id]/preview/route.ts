@@ -8,17 +8,31 @@ function getFieldValue(field: string, visitor: any): string | null {
   // Map common fields
   const fieldMap: Record<string, string> = {
     'email': 'email',
+    'PERSONAL_EMAILS': 'email',
+    'BUSINESS_EMAIL': 'email',
     'company': 'company',
+    'COMPANY_NAME': 'company',
     'city': 'city',
+    'PERSONAL_CITY': 'city',
     'country': 'country',
     'landing_page': 'landing_page',
+    'FULL_URL': 'landing_page',
     'utm_source': 'utm_source',
     'utm_campaign': 'utm_campaign',
     'device_type': 'device_type',
     'language': 'language',
   };
   
-  const mappedField = fieldMap[field] || field;
+  // Handle first/last name by splitting the full name
+  if (field === 'FIRST_NAME' && visitor.name) {
+    return visitor.name.split(' ')[0] || null;
+  }
+  if (field === 'LAST_NAME' && visitor.name) {
+    const parts = visitor.name.split(' ');
+    return parts.length > 1 ? parts[parts.length - 1] : null;
+  }
+  
+  const mappedField = fieldMap[field] || field.toLowerCase();
   return visitor[mappedField] ?? null;
 }
 
