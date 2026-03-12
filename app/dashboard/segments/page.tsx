@@ -446,10 +446,12 @@ export default function SegmentsPage() {
     loadPixels();
     loadSegments();
     loadFields();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     loadSegments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPixelFilter]);
 
   async function loadPixels() {

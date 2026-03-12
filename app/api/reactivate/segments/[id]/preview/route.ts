@@ -102,14 +102,17 @@ export async function GET(
     }
 
     // Get visitors - filter by pixel_id if segment has one
-    const visitors = await prisma.visitor.findMany({
-      where: { 
-        workspaceId: accountId,
-        ...(segment.pixelId ? { pixelId: segment.pixelId } : {})
-      },
-      take: 1000,
-      orderBy: { lastSeen: "desc" },
-    });
+    const whereClause = segment.pixelId 
+      ? `workspace_id = $1 AND pixel_id = $2`
+      : `workspace_id = $1`;
+    const params = segment.pixelId 
+      ? [accountId, segment.pixelId]
+      : [accountId];
+    
+    const visitors = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT * FROM visitors WHERE ${whereClause} ORDER BY last_seen DESC LIMIT 1000`,
+      ...params
+    );
 
     const matched = visitors.filter((v) => segmentMatchesVisitor(segment, v));
     const sample = matched.slice(0, 20).map((v) => ({
@@ -119,12 +122,12 @@ export async function GET(
       name: v.name,
       city: v.city,
       country: v.country,
-      page_views: v.pageViews,
-      landing_page: v.landingPage,
-      device_type: v.deviceType,
+      page_views: v.page_views,
+      landing_page: v.landing_page,
+      device_type: v.device_type,
       language: v.language,
-      utm_source: v.utmSource,
-      utm_campaign: v.utmCampaign,
+      utm_source: v.utm_source,
+      utm_campaign: v.utm_campaign,
     }));
 
     return NextResponse.json({ 
