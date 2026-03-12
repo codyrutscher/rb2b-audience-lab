@@ -120,6 +120,11 @@ export async function GET(
       city: v.city,
       country: v.country,
       page_views: v.pageViews,
+      landing_page: v.landingPage,
+      device_type: v.deviceType,
+      language: v.language,
+      utm_source: v.utmSource,
+      utm_campaign: v.utmCampaign,
     }));
 
     return NextResponse.json({ 

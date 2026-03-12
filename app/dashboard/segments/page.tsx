@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Eye, Filter, X } from "lucide-react";
+import { Plus, Trash2, Eye, Filter, X, Download, Table } from "lucide-react";
 
 const API_BASE = "/api/reactivate";
 
@@ -58,6 +58,9 @@ function SegmentRuleBuilder({
   onPreview,
   previewing,
   previewResult,
+  onExport,
+  onToggleTable,
+  showTableView,
 }: {
   segment: RtSegment;
   fields: string[];
@@ -69,6 +72,9 @@ function SegmentRuleBuilder({
   onPreview: () => void;
   previewing: boolean;
   previewResult: { count: number; sample: any[] } | null;
+  onExport: () => void;
+  onToggleTable: () => void;
+  showTableView: boolean;
 }) {
   const [newRule, setNewRule] = useState({ field: "", operator: "", value: "", groupId: "" });
   const [addingRule, setAddingRule] = useState(false);
@@ -99,16 +105,38 @@ function SegmentRuleBuilder({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold text-white">{segment.name}</h2>
-            <p className="text-sm text-gray-400 mt-1">Configure rules to match visitors</p>
+            <p className="text-sm text-gray-400 mt-1">
+              {segment.pixel ? `${segment.pixel.name} - ${segment.pixel.websiteName}` : "All Pixels"}
+            </p>
           </div>
-          <button
-            onClick={onPreview}
-            disabled={previewing}
-            className="flex items-center gap-2 px-4 py-2 bg-accent-secondary text-white rounded-lg hover:shadow-lg hover:shadow-accent-secondary/30 transition disabled:opacity-50"
-          >
-            <Eye className="w-4 h-4" />
-            {previewing ? "Loading..." : "Preview"}
-          </button>
+          <div className="flex gap-2">
+            {previewResult && (
+              <>
+                <button
+                  onClick={onToggleTable}
+                  className="flex items-center gap-2 px-4 py-2 bg-dark-tertiary border border-dark-border text-white rounded-lg hover:bg-dark-secondary transition"
+                >
+                  <Table className="w-4 h-4" />
+                  {showTableView ? "Hide Table" : "Show Table"}
+                </button>
+                <button
+                  onClick={onExport}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                >
+                  <Download className="w-4 h-4" />
+                  Export CSV
+                </button>
+              </>
+            )}
+            <button
+              onClick={onPreview}
+              disabled={previewing}
+              className="flex items-center gap-2 px-4 py-2 bg-accent-secondary text-white rounded-lg hover:shadow-lg hover:shadow-accent-secondary/30 transition disabled:opacity-50"
+            >
+              <Eye className="w-4 h-4" />
+              {previewing ? "Loading..." : "Preview"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -300,7 +328,7 @@ function SegmentRuleBuilder({
         </div>
 
         {/* Preview Results */}
-        {previewResult && (
+        {previewResult && !showTableView && (
           <div className="p-4 bg-green-500/5 border border-green-500/20 rounded-lg">
             <div className="text-sm font-medium text-green-300 mb-3">
               {previewResult.count} visitors match this segment
@@ -335,6 +363,61 @@ function SegmentRuleBuilder({
             )}
           </div>
         )}
+
+        {/* Table View */}
+        {previewResult && showTableView && (
+          <div className="border border-dark-border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-dark-tertiary/50 border-b border-dark-border">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Email</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Company</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Location</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Views</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Device</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Landing Page</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-dark-border">
+                  {previewResult.sample.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                        No visitors match this segment
+                      </td>
+                    </tr>
+                  ) : (
+                    previewResult.sample.map((v: any) => (
+                      <tr key={v.id} className="hover:bg-dark-tertiary/30 transition">
+                        <td className="px-4 py-3 text-sm text-white">
+                          <a href={`/dashboard/visitors/${v.id}`} className="hover:text-accent-primary">
+                            {v.email || <span className="text-gray-500">—</span>}
+                          </a>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-300">{v.name || "—"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-300">{v.company || "—"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-400">
+                          {v.city && v.country ? `${v.city}, ${v.country}` : v.country || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-300">{v.page_views || 0}</td>
+                        <td className="px-4 py-3 text-sm text-gray-400">{v.device_type || "—"}</td>
+                        <td className="px-4 py-3 text-sm text-gray-400 max-w-xs truncate">
+                          {v.landing_page || "—"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {previewResult.count > previewResult.sample.length && (
+              <div className="p-3 bg-dark-tertiary/30 border-t border-dark-border text-center text-xs text-gray-500">
+                Showing {previewResult.sample.length} of {previewResult.count} visitors
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -357,6 +440,7 @@ export default function SegmentsPage() {
   // Preview
   const [previewing, setPreviewing] = useState(false);
   const [previewResult, setPreviewResult] = useState<{ count: number; sample: any[] } | null>(null);
+  const [showTableView, setShowTableView] = useState(false);
 
   useEffect(() => {
     loadPixels();
@@ -498,6 +582,36 @@ export default function SegmentsPage() {
       setError(e instanceof Error ? e.message : "Failed to preview");
     }
     setPreviewing(false);
+  }
+
+  function exportToCSV() {
+    if (!previewResult || !selectedSegment) return;
+    
+    const headers = ["Email", "Name", "Company", "City", "Country", "Page Views", "Landing Page", "Device", "Language"];
+    const rows = previewResult.sample.map((v) => [
+      v.email || "",
+      v.name || "",
+      v.company || "",
+      v.city || "",
+      v.country || "",
+      v.page_views || 0,
+      v.landing_page || "",
+      v.device_type || "",
+      v.language || "",
+    ]);
+    
+    const csv = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+    
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${selectedSegment.name.replace(/[^a-z0-9]/gi, "_")}_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   if (loading) {
@@ -642,6 +756,9 @@ export default function SegmentsPage() {
                 onPreview={() => previewSegment(selectedSegment.id)}
                 previewing={previewing}
                 previewResult={previewResult}
+                onExport={exportToCSV}
+                onToggleTable={() => setShowTableView(!showTableView)}
+                showTableView={showTableView}
               />
             ) : (
               <div className="glass neon-border rounded-xl p-12 text-center">
