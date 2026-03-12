@@ -322,7 +322,7 @@ function SegmentRuleBuilder({
           <div className="text-sm text-blue-300 font-medium mb-2">How Segment Logic Works:</div>
           <ul className="text-xs text-gray-400 space-y-1">
             <li>• Base rules must ALL match (AND logic)</li>
-            <li>• Each group's rules must ALL match (AND within group)</li>
+            <li>• Each group&apos;s rules must ALL match (AND within group)</li>
             <li>• Visitor matches if they pass base rules AND at least ONE group (OR between groups)</li>
           </ul>
         </div>
