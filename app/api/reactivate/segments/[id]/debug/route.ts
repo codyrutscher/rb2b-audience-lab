@@ -13,6 +13,16 @@ export async function GET(
   const { id: segmentId } = await params;
 
   try {
+    // Get account to find workspace_id
+    const account = await prisma.rtAccount.findUnique({
+      where: { id: accountId },
+      select: { workspaceId: true },
+    });
+    
+    if (!account) {
+      return NextResponse.json({ error: "Account not found" }, { status: 404 });
+    }
+
     // Get segment with all rules
     const segment = await prisma.rtSegment.findFirst({
       where: { id: segmentId, accountId },
@@ -27,13 +37,13 @@ export async function GET(
       return NextResponse.json({ error: "Segment not found" }, { status: 404 });
     }
 
-    // Get sample visitors
+    // Get sample visitors using workspace_id
     const whereClause = segment.pixelId 
       ? `workspace_id = $1::uuid AND pixel_id = $2::uuid`
       : `workspace_id = $1::uuid`;
     const params = segment.pixelId 
-      ? [accountId, segment.pixelId]
-      : [accountId];
+      ? [account.workspaceId, segment.pixelId]
+      : [account.workspaceId];
     
     const visitors = await prisma.$queryRawUnsafe<any[]>(
       `SELECT * FROM visitors WHERE ${whereClause} ORDER BY last_seen DESC LIMIT 10`,
@@ -70,6 +80,7 @@ export async function GET(
       })),
       visitorCount: visitors.length,
       accountId,
+      workspaceId: account.workspaceId,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
