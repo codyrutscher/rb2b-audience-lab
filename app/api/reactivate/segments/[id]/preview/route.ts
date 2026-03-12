@@ -103,8 +103,8 @@ export async function GET(
 
     // Get visitors - filter by pixel_id if segment has one
     const whereClause = segment.pixelId 
-      ? `workspace_id = $1 AND pixel_id = $2`
-      : `workspace_id = $1`;
+      ? `workspace_id = $1::uuid AND pixel_id = $2::uuid`
+      : `workspace_id = $1::uuid`;
     const params = segment.pixelId 
       ? [accountId, segment.pixelId]
       : [accountId];
