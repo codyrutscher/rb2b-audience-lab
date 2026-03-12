@@ -699,15 +699,16 @@ export default function SegmentsPage() {
 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Segment List */}
-          <div className="w-full lg:w-1/3">
-            <div className="glass neon-border rounded-xl overflow-hidden">
-              <div className="p-4 border-b border-dark-border bg-dark-tertiary/30">
-                <h2 className="text-lg font-semibold text-white mb-3">Your Segments</h2>
-                <select
-                  value={selectedPixelFilter}
-                  onChange={(e) => setSelectedPixelFilter(e.target.value)}
-                  className="w-full px-3 py-2 bg-dark-secondary border border-dark-border rounded text-white text-sm"
-                >
+          {!(showTableView && previewResult) && (
+            <div className="w-full lg:w-1/3">
+              <div className="glass neon-border rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-dark-border bg-dark-tertiary/30">
+                  <h2 className="text-lg font-semibold text-white mb-3">Your Segments</h2>
+                  <select
+                    value={selectedPixelFilter}
+                    onChange={(e) => setSelectedPixelFilter(e.target.value)}
+                    className="w-full px-3 py-2 bg-dark-secondary border border-dark-border rounded text-white text-sm"
+                  >
                   <option value="">All Pixels</option>
                   {pixels.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
@@ -755,9 +756,10 @@ export default function SegmentsPage() {
               )}
             </div>
           </div>
+          )}
 
           {/* Rule Builder */}
-          <div className="w-full lg:w-2/3">
+          <div className={`w-full ${showTableView && previewResult ? 'lg:w-full' : 'lg:w-2/3'}`}>
             {selectedSegment ? (
               <SegmentRuleBuilder
                 segment={selectedSegment}
