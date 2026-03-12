@@ -68,6 +68,9 @@ export default function PixelsPage() {
 
   // Copy state
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  
+  // Test data state
+  const [generatingTestData, setGeneratingTestData] = useState<string | null>(null);
 
   const loadPixels = useCallback(async () => {
     setLoading(true);
@@ -222,6 +225,25 @@ export default function PixelsPage() {
     navigator.clipboard.writeText(script);
     setCopiedId(pixel.id);
     setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  async function generateTestData(pixelId: string) {
+    if (!confirm("Generate 20 test visitors for this pixel?")) return;
+    setGeneratingTestData(pixelId);
+    try {
+      const res = await fetch(`${API_BASE}/pixels/${pixelId}/generate-test-data`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: 20 }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to generate test data");
+      const data = await res.json();
+      alert(data.message || "Test data generated successfully!");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to generate test data");
+    }
+    setGeneratingTestData(null);
   }
 
   if (loading) {
@@ -381,6 +403,13 @@ export default function PixelsPage() {
                         Copy Script
                       </>
                     )}
+                  </button>
+                  <button
+                    onClick={() => generateTestData(pixel.id)}
+                    disabled={generatingTestData === pixel.id}
+                    className="flex items-center gap-2 px-3 py-2 bg-yellow-600/20 text-yellow-400 rounded-lg text-sm hover:bg-yellow-600/30 disabled:opacity-50 transition"
+                  >
+                    🧪 {generatingTestData === pixel.id ? "Generating..." : "Test Data"}
                   </button>
                   {pixel.canFetch && (
                     <button
