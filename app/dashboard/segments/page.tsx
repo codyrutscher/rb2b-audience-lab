@@ -450,7 +450,7 @@ export default function SegmentsPage() {
   // Preview
   const [previewing, setPreviewing] = useState(false);
   const [previewResult, setPreviewResult] = useState<{ count: number; sample: any[] } | null>(null);
-  const [showTableView, setShowTableView] = useState(false);
+  const [showTableView, setShowTableView] = useState(true);
 
   useEffect(() => {
     loadPixels();
