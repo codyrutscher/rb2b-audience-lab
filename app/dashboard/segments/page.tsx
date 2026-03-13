@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Eye, Filter, X, Download, Table } from "lucide-react";
+import { Plus, Trash2, Eye, Filter, X, Download, Table, Zap } from "lucide-react";
 
 const API_BASE = "/api/reactivate";
 
@@ -130,6 +130,13 @@ function SegmentRuleBuilder({
                 </button>
               </>
             )}
+            <button
+              onClick={() => window.location.href = '/dashboard/integrations'}
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm"
+            >
+              <Zap className="w-4 h-4" />
+              <span className="hidden sm:inline">Integrations</span>
+            </button>
             <button
               onClick={() => window.open(`/api/reactivate/segments/${segment.id}/debug`, '_blank')}
               className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition text-sm"

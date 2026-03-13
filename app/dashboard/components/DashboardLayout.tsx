@@ -36,6 +36,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/analytics", label: "Analytics", icon: <BarChart3 className="w-5 h-5" /> },
   { href: "/dashboard/segments", label: "Segments", icon: <Filter className="w-5 h-5" /> },
   { href: "/dashboard/contacts", label: "Contacts", icon: <UserCircle2 className="w-5 h-5" /> },
+  { href: "/dashboard/integrations", label: "Integrations", icon: <Sparkles className="w-5 h-5" /> },
   { href: "/dashboard/templates", label: "Templates", icon: <FileText className="w-5 h-5" /> },
   { href: "/dashboard/reactivate", label: "Campaigns", icon: <Mail className="w-5 h-5" /> },
   { href: "/dashboard/alerts", label: "Alerts", icon: <Bell className="w-5 h-5" /> },

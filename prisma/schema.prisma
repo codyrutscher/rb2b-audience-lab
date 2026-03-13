@@ -24,6 +24,7 @@ model RtAccount {
   pixels            RtPixel[]
   pixelSchedules    RtPixelSchedule[]
   emailTemplates    RtEmailTemplate[]
+  integrations      RtIntegration[]
 
   @@map("rt_accounts")
 }
@@ -162,6 +163,7 @@ model RtSegment {
   ruleGroups    RtSegmentRuleGroup[]
   contactStates RtContactSegmentState[]
   segmentCampaigns RtSegmentCampaign[]
+  segmentSyncs RtSegmentSync[]
 
   @@map("rt_segments")
 }
@@ -328,4 +330,47 @@ model RtAccountUnsubscribe {
   createdAt DateTime @default(now()) @map("created_at")
   @@unique([accountId, email])
   @@map("rt_account_unsubscribes")
+}
+
+model RtIntegration {
+  id        String   @id @default(uuid())
+  accountId String   @map("account_id")
+  account   RtAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name      String
+  platform  String   // 'klaviyo', 'google_sheets', 'webhook'
+  config    Json     @default("{}")
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  segmentSyncs RtSegmentSync[]
+
+  @@map("rt_integrations")
+}
+
+model RtSegmentSync {
+  id            String   @id @default(uuid())
+  segmentId     String   @map("segment_id")
+  segment       RtSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  integrationId String   @map("integration_id")
+  integration   RtIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  syncOnMatch   Boolean  @default(true) @map("sync_on_match")
+  fieldMapping  Json     @default("{}") @map("field_mapping")
+  lastSyncedAt  DateTime? @map("last_synced_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  syncLogs      RtSyncLog[]
+
+  @@unique([segmentId, integrationId])
+  @@map("rt_segment_syncs")
+}
+
+model RtSyncLog {
+  id            String   @id @default(uuid())
+  segmentSyncId String   @map("segment_sync_id")
+  segmentSync   RtSegmentSync @relation(fields: [segmentSyncId], references: [id], onDelete: Cascade)
+  visitorId     String   @map("visitor_id")
+  status        String   // 'success', 'failed', 'skipped'
+  errorMessage  String?  @map("error_message")
+  syncedAt      DateTime @default(now()) @map("synced_at")
+
+  @@map("rt_sync_logs")
 }
