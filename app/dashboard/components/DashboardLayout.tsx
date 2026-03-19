@@ -83,7 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="absolute inset-0 bg-gradient-to-b from-accent-primary/5 via-transparent to-transparent pointer-events-none" />
         
         {/* Logo */}
-        <div className="h-16 flex items-center gap-2 px-6 border-b border-dark-border relative z-10">
+        <div className="h-16 flex items-center justify-between px-6 border-b border-dark-border relative z-10">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="relative">
               <Eye className="w-6 h-6 text-accent-primary" />
@@ -91,6 +91,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <span className="text-xl font-bold gradient-text">Audience Lab</span>
           </Link>
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="p-2 text-gray-400 hover:text-white hover:bg-dark-tertiary rounded-lg transition-all disabled:opacity-50"
+            title={loggingOut ? 'Logging out...' : 'Logout'}
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Navigation */}
@@ -120,18 +128,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             );
           })}
         </nav>
-
-        {/* Logout Button */}
-        <div className="p-3 border-t border-dark-border relative z-10">
-          <button
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-gray-400 hover:text-white hover:bg-dark-tertiary rounded-lg transition-all disabled:opacity-50 group"
-          >
-            <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            <span className="font-medium">{loggingOut ? 'Logging out...' : 'Logout'}</span>
-          </button>
-        </div>
       </aside>
 
       {/* Main Content */}

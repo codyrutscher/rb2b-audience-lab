@@ -160,11 +160,21 @@ export default function Dashboard() {
         return;
       }
 
+      // Get workspace ID from user_workspaces
+      const { data: uw } = await supabase
+        .from('user_workspaces')
+        .select('workspace_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
+
+      const workspaceId = uw?.workspace_id || user.id;
+
       const response = await fetch('/api/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workspaceId: user.id,
+          workspaceId,
           type: 'visitors',
           filters: {},
         }),
