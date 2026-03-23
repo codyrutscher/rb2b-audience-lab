@@ -38,13 +38,22 @@ export default function TeamPage() {
   async function loadTeam() {
     const user = await getCurrentUser();
     if (user) {
-      setWorkspaceId(user.id);
-      
+      // Get actual workspace_id from user_workspaces
+      const { data: uw } = await supabase
+        .from('user_workspaces')
+        .select('workspace_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
+
+      const wsId = uw?.workspace_id || user.id;
+      setWorkspaceId(wsId);
+
       // Load team members
       const { data: membersData } = await supabase
         .from('user_workspaces')
         .select('*')
-        .eq('workspace_id', user.id);
+        .eq('workspace_id', wsId);
       
       if (membersData) {
         setMembers(membersData);
@@ -54,7 +63,7 @@ export default function TeamPage() {
       const { data: invitationsData } = await supabase
         .from('team_invitations')
         .select('*')
-        .eq('workspace_id', user.id)
+        .eq('workspace_id', wsId)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
       
@@ -118,12 +127,12 @@ export default function TeamPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Team Management</h1>
-            <p className="text-gray-600 mt-2">Invite team members and manage access</p>
+            <h1 className="text-3xl font-bold text-white mb-2">Team Management</h1>
+            <p className="text-gray-400">Invite team members and manage access</p>
           </div>
           <button
             onClick={() => setShowInviteForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 text-white rounded-lg transition-all font-medium"
           >
             <Plus className="w-4 h-4" />
             Invite Member
@@ -131,12 +140,12 @@ export default function TeamPage() {
         </div>
 
         {showInviteForm && (
-          <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Invite Team Member</h2>
+          <div className="glass neon-border rounded-xl p-6 mb-6">
+            <h2 className="text-xl font-semibold text-white mb-4">Invite Team Member</h2>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Email Address
                 </label>
                 <input
@@ -144,18 +153,18 @@ export default function TeamPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="colleague@company.com"
-                  className="w-full px-4 py-2 border rounded-lg text-gray-900"
+                  className="w-full px-4 py-2 bg-dark-tertiary border border-dark-border rounded-lg text-white placeholder-gray-500 focus:border-accent-primary focus:outline-none transition"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Role
                 </label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg text-gray-900"
+                  className="w-full px-4 py-2 bg-dark-tertiary border border-dark-border rounded-lg text-white focus:border-accent-primary focus:outline-none transition"
                 >
                   <option value="member">Member - Can view data</option>
                   <option value="admin">Admin - Can manage settings</option>
@@ -167,13 +176,13 @@ export default function TeamPage() {
                 <button
                   onClick={sendInvitation}
                   disabled={sending || !email.trim()}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg"
+                  className="px-4 py-2 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 disabled:opacity-50 text-white rounded-lg transition-all font-medium"
                 >
                   {sending ? 'Sending...' : 'Send Invitation'}
                 </button>
                 <button
                   onClick={() => setShowInviteForm(false)}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg"
+                  className="px-4 py-2 bg-dark-tertiary hover:bg-dark-border text-gray-300 rounded-lg transition"
                 >
                   Cancel
                 </button>
@@ -184,27 +193,27 @@ export default function TeamPage() {
 
         {/* Pending Invitations */}
         {invitations.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm border mb-6">
-            <div className="px-6 py-4 border-b">
-              <h2 className="text-xl font-semibold text-gray-900">Pending Invitations</h2>
+          <div className="glass neon-border rounded-xl mb-6 overflow-hidden">
+            <div className="px-6 py-4 border-b border-dark-border">
+              <h2 className="text-xl font-semibold text-white">Pending Invitations</h2>
             </div>
-            <div className="divide-y">
+            <div className="divide-y divide-dark-border">
               {invitations.map((invitation) => (
                 <div key={invitation.id} className="p-6 flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="p-2 bg-yellow-100 rounded-lg">
-                      <Mail className="w-5 h-5 text-yellow-600" />
+                    <div className="p-2 bg-yellow-500/20 rounded-lg">
+                      <Mail className="w-5 h-5 text-yellow-400" />
                     </div>
                     <div>
-                      <div className="font-medium text-gray-900">{invitation.email}</div>
-                      <div className="text-sm text-gray-600">
+                      <div className="font-medium text-white">{invitation.email}</div>
+                      <div className="text-sm text-gray-400">
                         Invited {formatDistanceToNow(new Date(invitation.created_at), { addSuffix: true })} · {invitation.role}
                       </div>
                     </div>
                   </div>
                   <button
                     onClick={() => revokeInvitation(invitation.id)}
-                    className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
+                    className="px-3 py-1 text-sm text-red-400 hover:bg-red-500/10 rounded transition"
                   >
                     Revoke
                   </button>
@@ -215,20 +224,20 @@ export default function TeamPage() {
         )}
 
         {/* Team Members */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="px-6 py-4 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">Team Members</h2>
+        <div className="glass neon-border rounded-xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-dark-border">
+            <h2 className="text-xl font-semibold text-white">Team Members</h2>
           </div>
-          <div className="divide-y">
+          <div className="divide-y divide-dark-border">
             {members.map((member) => (
               <div key={member.id} className="p-6 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <UserCheck className="w-5 h-5 text-purple-600" />
+                  <div className="p-2 bg-accent-primary/20 rounded-lg">
+                    <UserCheck className="w-5 h-5 text-accent-primary" />
                   </div>
                   <div>
-                    <div className="font-medium text-gray-900">{member.email || member.user_id}</div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="font-medium text-white">{member.email || member.user_id}</div>
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
                       <Shield className="w-4 h-4" />
                       <span className="capitalize">{member.role}</span>
                       <span>·</span>
@@ -239,7 +248,7 @@ export default function TeamPage() {
                 {member.role !== 'owner' && (
                   <button
                     onClick={() => removeMember(member.user_id)}
-                    className="text-red-600 hover:text-red-800"
+                    className="text-gray-400 hover:text-red-400 transition"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -249,12 +258,12 @@ export default function TeamPage() {
 
             {members.length === 0 && (
               <div className="text-center py-12">
-                <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No team members yet</h3>
-                <p className="text-gray-600 mb-4">Invite your first team member to collaborate</p>
+                <Users className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-white mb-2">No team members yet</h3>
+                <p className="text-gray-400 mb-4">Invite your first team member to collaborate</p>
                 <button
                   onClick={() => setShowInviteForm(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 text-white rounded-lg transition-all font-medium"
                 >
                   <Plus className="w-4 h-4" />
                   Invite Member

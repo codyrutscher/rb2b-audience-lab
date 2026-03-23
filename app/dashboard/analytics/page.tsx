@@ -27,6 +27,16 @@ export default function AnalyticsPage() {
     const user = await getCurrentUser();
     if (!user) return;
 
+    // Get actual workspace_id from user_workspaces
+    const { data: uw } = await supabase
+      .from('user_workspaces')
+      .select('workspace_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .single();
+
+    const workspaceId = uw?.workspace_id || user.id;
+
     // Calculate date range
     const now = new Date();
     const daysAgo = dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : 90;
@@ -36,16 +46,27 @@ export default function AnalyticsPage() {
     const { data: visitors } = await supabase
       .from('visitors')
       .select('*')
-      .eq('workspace_id', user.id)
+      .eq('workspace_id', workspaceId)
       .gte('first_seen', startDate.toISOString());
 
-    // Fetch page views
-    const { data: pageViews } = await supabase
-      .from('page_views')
-      .select('*')
-      .gte('timestamp', startDate.toISOString());
+    // Fetch page views - page_views doesn't have workspace_id, so filter by visitor_ids
+    let pageViews: any[] = [];
+    if (visitors && visitors.length > 0) {
+      const visitorIds = visitors.map((v: any) => v.id);
+      // Supabase .in() has a limit, batch if needed
+      const batchSize = 100;
+      for (let i = 0; i < visitorIds.length; i += batchSize) {
+        const batch = visitorIds.slice(i, i + batchSize);
+        const { data: pvBatch } = await supabase
+          .from('page_views')
+          .select('*')
+          .in('visitor_id', batch)
+          .gte('timestamp', startDate.toISOString());
+        if (pvBatch) pageViews.push(...pvBatch);
+      }
+    }
 
-    if (visitors && pageViews) {
+    if (visitors) {
       // Calculate metrics
       const totalVisitors = visitors.length;
       const identifiedVisitors = visitors.filter((v: any) => v.identified).length;

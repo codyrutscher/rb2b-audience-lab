@@ -19,6 +19,8 @@ export default function ActivityFeedPage() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
+  const [seeding, setSeeding] = useState(false);
+  const [seedMsg, setSeedMsg] = useState<string | null>(null);
 
   useEffect(() => {
     loadActivities();
@@ -47,6 +49,27 @@ export default function ActivityFeedPage() {
       setActivities(data);
     }
     setLoading(false);
+  }
+
+  async function seedTestActivity() {
+    setSeeding(true);
+    setSeedMsg(null);
+    try {
+      const res = await fetch('/api/reactivate/test/seed-activity', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSeedMsg(`Created ${data.activityEventsCreated} activity events and ${data.pageViewsCreated} page views`);
+        loadActivities();
+      } else {
+        setSeedMsg(data.error || 'Failed to seed data');
+      }
+    } catch {
+      setSeedMsg('Failed to seed test data');
+    }
+    setSeeding(false);
   }
 
   function getActivityIcon(type: string) {
@@ -102,6 +125,13 @@ export default function ActivityFeedPage() {
             <p className="text-gray-400">Live stream of visitor activity on your site</p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={seedTestActivity}
+              disabled={seeding}
+              className="flex items-center gap-2 px-4 py-2 bg-dark-tertiary border border-dark-border hover:border-accent-primary text-white rounded-lg transition disabled:opacity-50"
+            >
+              🧪 {seeding ? 'Seeding...' : 'Seed Test Data'}
+            </button>
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
@@ -117,6 +147,10 @@ export default function ActivityFeedPage() {
             </div>
           </div>
         </div>
+
+        {seedMsg && (
+          <div className="mb-4 p-3 glass neon-border rounded-lg text-sm text-gray-300">{seedMsg}</div>
+        )}
 
         <div className="glass neon-border rounded-xl overflow-hidden">
           {loading ? (
