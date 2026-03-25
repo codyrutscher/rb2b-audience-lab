@@ -62,7 +62,7 @@ export default function Home() {
               </Link>
               <Link 
                 href="/signup" 
-                className="px-6 py-2.5 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 rounded-lg transition-all font-medium flex items-center gap-2 group"
+                className="px-6 py-2.5 bg-gradient-purple text-white hover:shadow-lg hover:shadow-accent-primary/30 rounded-lg transition-all font-medium flex items-center gap-2 group"
               >
                 Get Started
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -101,14 +101,14 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
               <Link 
                 href="/signup" 
-                className="px-8 py-4 bg-gradient-purple hover:shadow-2xl hover:shadow-accent-primary/40 rounded-xl transition-all font-bold text-lg flex items-center gap-3 group"
+                className="px-8 py-4 bg-gradient-purple text-white hover:shadow-2xl hover:shadow-accent-primary/40 rounded-xl transition-all font-bold text-lg flex items-center gap-3 group"
               >
                 Start Free Trial
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
               </Link>
               <Link 
                 href="/dashboard/install" 
-                className="px-8 py-4 glass-hover neon-border rounded-xl transition-all font-bold text-lg flex items-center gap-3"
+                className="px-8 py-4 glass-hover neon-border text-white rounded-xl transition-all font-bold text-lg flex items-center gap-3"
               >
                 <Code className="w-5 h-5" />
                 View Demo
@@ -273,7 +273,7 @@ export default function Home() {
           </p>
           <Link 
             href="/signup" 
-            className="inline-flex items-center gap-3 px-12 py-5 bg-gradient-purple hover:shadow-2xl hover:shadow-accent-primary/50 rounded-xl transition-all font-bold text-xl group"
+            className="inline-flex items-center gap-3 px-12 py-5 bg-gradient-purple text-white hover:shadow-2xl hover:shadow-accent-primary/50 rounded-xl transition-all font-bold text-xl group"
           >
             Start Your Free Trial
             <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />

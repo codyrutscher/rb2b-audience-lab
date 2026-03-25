@@ -114,6 +114,7 @@ body {
   color: var(--text-primary);
 }
 
-body a {
+/* Only color plain text links, not buttons or nav items */
+body a:not([class]) {
   color: var(--accent-primary);
 }
