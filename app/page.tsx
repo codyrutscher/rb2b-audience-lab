@@ -136,21 +136,81 @@ export default function Home() {
           <div className="relative max-w-6xl mx-auto">
             <div className="glass neon-border rounded-2xl p-2 glow">
               <div className="bg-dark-tertiary rounded-xl overflow-hidden">
-                <div className="h-12 bg-dark-secondary border-b border-dark-border flex items-center px-4 gap-2">
+                {/* Fake browser chrome */}
+                <div className="h-12 bg-dark-secondary border-b border-dark-border flex items-center px-4 gap-3">
                   <div className="w-3 h-3 rounded-full bg-red-500/50" />
                   <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
                   <div className="w-3 h-3 rounded-full bg-green-500/50" />
+                  <div className="flex-1 mx-4 h-6 bg-dark-tertiary rounded-md flex items-center px-3">
+                    <span className="text-xs text-gray-500">app.audiencelab.io/dashboard</span>
+                  </div>
                 </div>
-                <div className="p-8 space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center gap-4 glass rounded-lg p-4">
-                      <div className="w-12 h-12 rounded-full bg-gradient-purple" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-gray-700 rounded w-1/3" />
-                        <div className="h-3 bg-gray-800 rounded w-1/2" />
+                {/* Fake table header */}
+                <div className="px-6 pt-5 pb-2 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-white">Recent Visitors</span>
+                  <span className="text-xs text-green-400 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block animate-pulse" />
+                    Live
+                  </span>
+                </div>
+                <div className="px-6 pb-6 space-y-3">
+                  {[
+                    {
+                      initials: "SC",
+                      color: "from-violet-500 to-purple-600",
+                      name: "Sarah Chen",
+                      email: "s.chen@stripe.com",
+                      company: "Stripe",
+                      location: "San Francisco, CA",
+                      pages: 8,
+                      time: "2m ago",
+                      badge: { label: "🔥 Hot Lead", cls: "bg-red-500/20 text-red-400 border-red-500/30" },
+                    },
+                    {
+                      initials: "MR",
+                      color: "from-blue-500 to-cyan-500",
+                      name: "Marcus Reid",
+                      email: "m.reid@hubspot.com",
+                      company: "HubSpot",
+                      location: "Boston, MA",
+                      pages: 5,
+                      time: "7m ago",
+                      badge: { label: "⚡ Warm", cls: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
+                    },
+                    {
+                      initials: "AL",
+                      color: "from-emerald-500 to-teal-500",
+                      name: "Aisha Lawson",
+                      email: "a.lawson@notion.so",
+                      company: "Notion",
+                      location: "New York, NY",
+                      pages: 12,
+                      time: "14m ago",
+                      badge: { label: "🔥 Hot Lead", cls: "bg-red-500/20 text-red-400 border-red-500/30" },
+                    },
+                  ].map((visitor) => (
+                    <div key={visitor.name} className="flex items-center gap-4 glass rounded-lg p-4 hover:border-accent-primary/30 transition-all cursor-pointer group">
+                      {/* Avatar */}
+                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${visitor.color} flex items-center justify-center text-white text-sm font-bold flex-shrink-0`}>
+                        {visitor.initials}
                       </div>
-                      <div className="px-3 py-1 bg-accent-primary/20 text-accent-primary rounded-full text-xs font-bold border border-accent-primary/30">
-                        🔥 Hot Lead
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-white">{visitor.name}</span>
+                          <span className="text-xs text-gray-500">·</span>
+                          <span className="text-xs text-gray-400">{visitor.company}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">{visitor.email}</div>
+                      </div>
+                      {/* Meta */}
+                      <div className="hidden sm:flex flex-col items-end gap-1 text-xs text-gray-500 flex-shrink-0">
+                        <span>{visitor.location}</span>
+                        <span>{visitor.pages} pages · {visitor.time}</span>
+                      </div>
+                      {/* Badge */}
+                      <div className={`px-2.5 py-1 rounded-full text-xs font-bold border flex-shrink-0 ${visitor.badge.cls}`}>
+                        {visitor.badge.label}
                       </div>
                     </div>
                   ))}
