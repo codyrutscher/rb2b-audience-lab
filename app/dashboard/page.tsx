@@ -50,13 +50,50 @@ export default function Dashboard() {
   }, []);
 
   const loadVisitors = useCallback(async () => {
+    const user = await getCurrentUser();
+    if (!user) return;
+
+    // Get actual workspace_id
+    const { data: uw } = await supabase
+      .from('user_workspaces')
+      .select('workspace_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .single();
+
+    const workspaceId = uw?.workspace_id || user.id;
+
+    // First get total count (no limit) for accurate stats
+    let countQuery = supabase
+      .from('visitors')
+      .select('id, identified, first_seen', { count: 'exact' })
+      .eq('workspace_id', workspaceId);
+
+    if (selectedPixel !== 'all') {
+      countQuery = countQuery.eq('pixel_id', selectedPixel);
+    }
+
+    const { data: allVisitors, count } = await countQuery;
+
+    if (allVisitors) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      setStats({
+        total: count ?? allVisitors.length,
+        identified: allVisitors.filter((v: any) => v.identified).length,
+        today: allVisitors.filter((v: any) => new Date(v.first_seen) >= today).length,
+      });
+    }
+
+    // Then get the page of visitors for the table (limited)
     let query = supabase
       .from('visitors')
       .select('*')
+      .eq('workspace_id', workspaceId)
       .order('last_seen', { ascending: false })
       .limit(50);
 
-    // Filter by pixel if selected
     if (selectedPixel !== 'all') {
       query = query.eq('pixel_id', selectedPixel);
     }
@@ -65,15 +102,6 @@ export default function Dashboard() {
 
     if (data) {
       setVisitors(data);
-      
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      setStats({
-        total: data.length,
-        identified: data.filter((v: Visitor) => v.identified).length,
-        today: data.filter((v: Visitor) => new Date(v.first_seen) >= today).length,
-      });
     }
   }, [selectedPixel]);
 
@@ -176,7 +204,9 @@ export default function Dashboard() {
         body: JSON.stringify({
           workspaceId,
           type: 'visitors',
-          filters: {},
+          filters: {
+            ...(selectedPixel !== 'all' ? { pixel_id: selectedPixel } : {}),
+          },
         }),
       });
 

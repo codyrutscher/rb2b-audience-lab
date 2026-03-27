@@ -21,10 +21,17 @@ export async function POST(request: NextRequest) {
     let csvContent = '';
 
     if (type === 'visitors') {
-      const { data: visitors } = await supabase
+      let query = supabase
         .from('visitors')
         .select('*')
         .eq('workspace_id', workspaceId);
+
+      // Apply pixel filter if provided
+      if (filters?.pixel_id) {
+        query = query.eq('pixel_id', filters.pixel_id);
+      }
+
+      const { data: visitors } = await query;
 
       data = visitors || [];
       
