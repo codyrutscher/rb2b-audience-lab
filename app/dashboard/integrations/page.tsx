@@ -130,6 +130,7 @@ export default function IntegrationsPage() {
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [integrationName, setIntegrationName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   useEffect(() => { loadIntegrations(); }, []);
 
@@ -148,6 +149,7 @@ export default function IntegrationsPage() {
   async function createIntegration() {
     if (!selectedPlatform || !integrationName.trim()) return;
     setCreating(true);
+    setConnectError(null);
     try {
       const res = await fetch(`${API_BASE}/integrations`, {
         method: "POST",
@@ -159,9 +161,15 @@ export default function IntegrationsPage() {
         setSelectedPlatform(null);
         setIntegrationName("");
         setFormValues({});
+        setConnectError(null);
         loadIntegrations();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setConnectError(data.error || `Connection failed (${res.status})`);
       }
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      setConnectError(e.message || "Network error — please try again.");
+    }
     setCreating(false);
   }
 
@@ -267,15 +275,23 @@ export default function IntegrationsPage() {
                 ))}
               </div>
               <div className="flex gap-3 mt-6">
+                {connectError && (
+                  <div className="w-full mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+                    <div className="font-medium mb-1">Connection failed</div>
+                    <div className="text-red-400/80">{connectError}</div>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-3">
                 <button
                   onClick={createIntegration}
                   disabled={creating || !integrationName.trim() || selectedPlatform.fields.some(f => f.required && !formValues[f.key]?.trim())}
                   className="flex-1 px-4 py-2 bg-accent-primary text-white rounded-lg disabled:opacity-50 text-sm font-medium"
                 >
-                  {creating ? "Connecting..." : "Connect"}
+                  {creating ? "Testing connection..." : "Connect"}
                 </button>
                 <button
-                  onClick={() => { setSelectedPlatform(null); setFormValues({}); setIntegrationName(""); }}
+                  onClick={() => { setSelectedPlatform(null); setFormValues({}); setIntegrationName(""); setConnectError(null); }}
                   className="px-4 py-2 text-gray-400 hover:text-white text-sm"
                 >
                   Cancel
