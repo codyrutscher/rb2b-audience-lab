@@ -19,6 +19,7 @@ import {
   Sparkles,
   Mail,
   FileText,
+  CreditCard,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/supabase-auth";
@@ -42,6 +43,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/alerts", label: "Alerts", icon: <Bell className="w-5 h-5" /> },
   { href: "/dashboard/team", label: "Team", icon: <Users className="w-5 h-5" /> },
   { href: "/dashboard/api-keys", label: "API Keys", icon: <Key className="w-5 h-5" /> },
+  { href: "/dashboard/billing", label: "Billing", icon: <CreditCard className="w-5 h-5" /> },
   { href: "/dashboard/settings", label: "Settings", icon: <Settings className="w-5 h-5" /> },
 ];
 
