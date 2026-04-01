@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Trash2, Key, Copy, Check } from "lucide-react";
+import { Plus, Trash2, Key, Copy, Check, AlertCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/supabase-auth";
 import { formatDistanceToNow } from "date-fns";
@@ -20,11 +20,12 @@ export default function ApiKeysPage() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
-  const [permissions, setPermissions] = useState<string[]>(['read']);
+  const [permissions, setPermissions] = useState<string[]>(["read"]);
   const [creating, setCreating] = useState(false);
   const [newKey, setNewKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [workspaceId, setWorkspaceId] = useState<string>("");
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     loadApiKeys();
@@ -32,77 +33,76 @@ export default function ApiKeysPage() {
 
   async function loadApiKeys() {
     const user = await getCurrentUser();
-    if (user) {
-      setWorkspaceId(user.id);
-      
-      const { data } = await supabase
-        .from('api_keys')
-        .select('*')
-        .eq('workspace_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      if (data) {
-        setApiKeys(data);
-      }
-    }
+    if (!user) return;
+
+    // Get actual workspace_id from user_workspaces
+    const { data: uw } = await supabase
+      .from("user_workspaces")
+      .select("workspace_id")
+      .eq("user_id", user.id)
+      .limit(1)
+      .single();
+
+    const wsId = uw?.workspace_id || user.id;
+    setWorkspaceId(wsId);
+
+    const { data, error } = await supabase
+      .from("api_keys")
+      .select("*")
+      .eq("workspace_id", wsId)
+      .order("created_at", { ascending: false });
+
+    if (data) setApiKeys(data);
+    if (error) console.error("Failed to load API keys:", error.message);
   }
 
   async function createApiKey() {
-    if (!name.trim()) return;
-    
+    if (!name.trim() || permissions.length === 0) return;
     setCreating(true);
+    setCreateError(null);
+
     try {
-      // Generate a random API key
-      const fullKey = `al_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      const fullKey = `al_${crypto.randomUUID().replace(/-/g, "")}`;
       const keyPrefix = fullKey.substring(0, 12);
 
-      const { error } = await supabase
-        .from('api_keys')
-        .insert({
-          workspace_id: workspaceId,
-          name,
-          key_hash: fullKey, // In production, hash this!
-          key_prefix: keyPrefix,
-          permissions,
-        });
+      const { error } = await supabase.from("api_keys").insert({
+        workspace_id: workspaceId,
+        name: name.trim(),
+        key_hash: fullKey,
+        key_prefix: keyPrefix,
+        permissions,
+      });
 
-      if (!error) {
+      if (error) {
+        setCreateError(error.message);
+      } else {
         setNewKey(fullKey);
         setName("");
-        setPermissions(['read']);
+        setPermissions(["read"]);
         loadApiKeys();
       }
-    } catch (error) {
-      console.error('Error creating API key:', error);
+    } catch (err: any) {
+      setCreateError(err.message || "Unexpected error creating API key");
     }
     setCreating(false);
   }
 
   async function deleteApiKey(id: string) {
-    if (!confirm('Are you sure you want to delete this API key? This action cannot be undone.')) return;
-    
-    await supabase
-      .from('api_keys')
-      .delete()
-      .eq('id', id);
-    
-    loadApiKeys();
+    if (!confirm("Delete this API key? This cannot be undone.")) return;
+    const { error } = await supabase.from("api_keys").delete().eq("id", id);
+    if (!error) loadApiKeys();
   }
 
   function togglePermission(permission: string) {
-    if (permissions.includes(permission)) {
-      setPermissions(permissions.filter(p => p !== permission));
-    } else {
-      setPermissions([...permissions, permission]);
-    }
+    setPermissions((prev) =>
+      prev.includes(permission) ? prev.filter((p) => p !== permission) : [...prev, permission]
+    );
   }
 
   function copyToClipboard(text: string) {
-    if (text) {
-      navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
   function closeNewKeyModal() {
@@ -112,15 +112,15 @@ export default function ApiKeysPage() {
 
   return (
     <div className="p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">API Keys</h1>
-            <p className="text-gray-600 mt-2">Manage API keys for programmatic access</p>
+            <h1 className="text-3xl font-bold text-white mb-2">API Keys</h1>
+            <p className="text-gray-400">Manage API keys for programmatic access to your visitor data</p>
           </div>
           <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+            onClick={() => { setShowForm(true); setCreateError(null); }}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 text-white rounded-lg transition-all font-medium"
           >
             <Plus className="w-4 h-4" />
             Create API Key
@@ -129,28 +129,26 @@ export default function ApiKeysPage() {
 
         {/* New Key Modal */}
         {newKey && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">API Key Created</h2>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                <p className="text-sm text-yellow-800 mb-2">
-                  ⚠️ Make sure to copy your API key now. You won&apos;t be able to see it again!
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="glass neon-border rounded-xl p-6 w-full max-w-lg">
+              <h2 className="text-xl font-semibold text-white mb-4">API Key Created</h2>
+              <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg mb-4">
+                <p className="text-sm text-yellow-400">
+                  ⚠️ Copy your API key now — you won&apos;t be able to see it again.
                 </p>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <div className="flex items-center justify-between">
-                  <code className="text-sm text-gray-900 break-all">{newKey}</code>
-                  <button
-                    onClick={() => copyToClipboard(newKey)}
-                    className="ml-4 p-2 text-purple-600 hover:bg-purple-50 rounded"
-                  >
-                    {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                  </button>
-                </div>
+              <div className="p-4 bg-dark-tertiary rounded-lg mb-6 flex items-center justify-between gap-4">
+                <code className="text-sm text-green-400 break-all">{newKey}</code>
+                <button
+                  onClick={() => copyToClipboard(newKey)}
+                  className="flex-shrink-0 p-2 text-gray-400 hover:text-white transition"
+                >
+                  {copied ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
+                </button>
               </div>
               <button
                 onClick={closeNewKeyModal}
-                className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+                className="w-full px-4 py-2 bg-gradient-purple text-white rounded-lg font-medium"
               >
                 Done
               </button>
@@ -158,70 +156,69 @@ export default function ApiKeysPage() {
           </div>
         )}
 
+        {/* Create Form */}
         {showForm && !newKey && (
-          <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Create New API Key</h2>
-            
+          <div className="glass neon-border rounded-xl p-6 mb-6">
+            <h2 className="text-xl font-semibold text-white mb-4">Create New API Key</h2>
+
+            {createError && (
+              <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-lg mb-4">
+                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-sm font-medium text-red-400">Failed to create API key</div>
+                  <div className="text-sm text-red-400/80 mt-1">{createError}</div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
-                  Key Name
-                </label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Key Name</label>
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g., Production API Key"
-                  className="w-full px-4 py-2 border rounded-lg text-gray-900"
+                  className="w-full px-4 py-2 bg-dark-tertiary border border-dark-border rounded-lg text-white placeholder-gray-500 focus:border-accent-primary focus:outline-none transition"
+                  autoFocus
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
-                  Permissions
-                </label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Permissions</label>
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={permissions.includes('read')}
-                      onChange={() => togglePermission('read')}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm text-gray-900">Read - View visitors and analytics</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={permissions.includes('write')}
-                      onChange={() => togglePermission('write')}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm text-gray-900">Write - Track events and identify visitors</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={permissions.includes('delete')}
-                      onChange={() => togglePermission('delete')}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm text-gray-900">Delete - Remove visitor data</span>
-                  </label>
+                  {[
+                    { key: "read", label: "Read", desc: "View visitors and analytics" },
+                    { key: "write", label: "Write", desc: "Track events and identify visitors" },
+                    { key: "delete", label: "Delete", desc: "Remove visitor data" },
+                  ].map(({ key, label, desc }) => (
+                    <label key={key} className="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={permissions.includes(key)}
+                        onChange={() => togglePermission(key)}
+                        className="w-4 h-4 accent-accent-primary"
+                      />
+                      <span className="text-sm text-gray-300 group-hover:text-white transition">
+                        <span className="font-medium">{label}</span>
+                        <span className="text-gray-500"> — {desc}</span>
+                      </span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-2">
                 <button
                   onClick={createApiKey}
                   disabled={creating || !name.trim() || permissions.length === 0}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg"
+                  className="px-4 py-2 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 disabled:opacity-50 text-white rounded-lg transition-all font-medium"
                 >
-                  {creating ? 'Creating...' : 'Create Key'}
+                  {creating ? "Creating..." : "Create Key"}
                 </button>
                 <button
-                  onClick={() => setShowForm(false)}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg"
+                  onClick={() => { setShowForm(false); setCreateError(null); }}
+                  className="px-4 py-2 bg-dark-tertiary hover:bg-dark-border text-gray-300 rounded-lg transition"
                 >
                   Cancel
                 </button>
@@ -230,37 +227,43 @@ export default function ApiKeysPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="px-6 py-4 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">Your API Keys</h2>
+        {/* Keys List */}
+        <div className="glass neon-border rounded-xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-dark-border">
+            <h2 className="text-xl font-semibold text-white">Your API Keys</h2>
           </div>
-          <div className="divide-y">
+          <div className="divide-y divide-dark-border">
             {apiKeys.map((apiKey) => (
-              <div key={apiKey.id} className="p-6 flex items-center justify-between">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Key className="w-5 h-5 text-purple-600" />
+              <div key={apiKey.id} className="p-6 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className="p-2 bg-accent-primary/20 rounded-lg flex-shrink-0">
+                    <Key className="w-5 h-5 text-accent-primary" />
                   </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">{apiKey.name}</div>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <div>Key: {apiKey.key_prefix}...</div>
-                      <div className="flex items-center gap-2">
-                        <span>Permissions: {apiKey.permissions.join(', ')}</span>
-                        <span>·</span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-white">{apiKey.name}</div>
+                    <div className="text-sm text-gray-400 space-y-0.5 mt-1">
+                      <div className="font-mono">{apiKey.key_prefix}••••••••••••</div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="flex gap-1">
+                          {apiKey.permissions.map((p) => (
+                            <span key={p} className="px-1.5 py-0.5 bg-dark-tertiary rounded text-xs text-gray-400 capitalize">{p}</span>
+                          ))}
+                        </span>
+                        <span className="text-gray-600">·</span>
                         <span>Created {formatDistanceToNow(new Date(apiKey.created_at), { addSuffix: true })}</span>
+                        {apiKey.last_used_at && (
+                          <>
+                            <span className="text-gray-600">·</span>
+                            <span>Last used {formatDistanceToNow(new Date(apiKey.last_used_at), { addSuffix: true })}</span>
+                          </>
+                        )}
                       </div>
-                      {apiKey.last_used_at && (
-                        <div className="text-xs">
-                          Last used {formatDistanceToNow(new Date(apiKey.last_used_at), { addSuffix: true })}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
                 <button
                   onClick={() => deleteApiKey(apiKey.id)}
-                  className="text-red-600 hover:text-red-800"
+                  className="text-gray-500 hover:text-red-400 transition flex-shrink-0"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -269,12 +272,12 @@ export default function ApiKeysPage() {
 
             {apiKeys.length === 0 && (
               <div className="text-center py-12">
-                <Key className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No API keys yet</h3>
-                <p className="text-gray-600 mb-4">Create your first API key to access the API</p>
+                <Key className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-white mb-2">No API keys yet</h3>
+                <p className="text-gray-400 mb-4">Create your first API key to access the API programmatically</p>
                 <button
                   onClick={() => setShowForm(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 text-white rounded-lg transition-all font-medium"
                 >
                   <Plus className="w-4 h-4" />
                   Create API Key
@@ -284,12 +287,13 @@ export default function ApiKeysPage() {
           </div>
         </div>
 
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-semibold text-blue-900 mb-2">API Documentation</h3>
-          <p className="text-sm text-blue-800 mb-2">
-            Use your API key to access the Audience Lab API programmatically.
+        {/* Docs callout */}
+        <div className="mt-6 p-4 glass neon-border rounded-xl">
+          <h3 className="font-semibold text-white mb-1">Using the API</h3>
+          <p className="text-sm text-gray-400 mb-2">
+            Pass your API key in the <code className="text-accent-primary">Authorization</code> header as <code className="text-accent-primary">Bearer &lt;key&gt;</code>.
           </p>
-          <Link href="/docs" className="text-sm text-blue-600 hover:underline">
+          <Link href="/docs" className="text-sm text-accent-primary hover:underline">
             View API Documentation →
           </Link>
         </div>
