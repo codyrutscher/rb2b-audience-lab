@@ -719,10 +719,23 @@ export default function ReactivatePage() {
                 {" · "}
                 <a href="/dashboard/templates" className="text-accent-primary hover:underline">Templates</a>
               </p>
+              {emailTemplates.length === 0 && (
+                <div className="mb-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm text-yellow-400 flex items-center gap-2">
+                  <span>⚠️</span>
+                  <span>
+                    You need at least one email template before creating a campaign.{" "}
+                    <a href="/dashboard/templates" className="underline font-medium hover:text-yellow-300">
+                      Go to Templates →
+                    </a>
+                  </span>
+                </div>
+              )}
               {!showCampaignForm ? (
                 <button
                   onClick={() => { setShowCampaignForm(true); setEditingCampaign(null); resetCampaignForm(); }}
-                  className="flex items-center gap-2 px-3 py-2 text-accent-primary hover:bg-accent-primary/10 rounded"
+                  disabled={emailTemplates.length === 0}
+                  title={emailTemplates.length === 0 ? "Create a template first before creating a campaign" : undefined}
+                  className="flex items-center gap-2 px-3 py-2 text-accent-primary hover:bg-accent-primary/10 rounded disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-4 h-4" /> New Campaign
                 </button>
@@ -743,16 +756,25 @@ export default function ReactivatePage() {
                   </div>
                   <div>
                     <label className="text-gray-400 text-sm block mb-1">2. Template (required)</label>
-                    <select
-                      value={campaignTemplateId}
-                      onChange={(e) => setCampaignTemplateId(e.target.value)}
-                      className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white"
-                    >
-                      <option value="">Choose template</option>
-                      {emailTemplates.map((t) => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
-                    </select>
+                    {emailTemplates.length === 0 ? (
+                      <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm text-yellow-400">
+                        No templates found.{" "}
+                        <a href="/dashboard/templates" className="underline font-medium hover:text-yellow-300">
+                          Create a template first →
+                        </a>
+                      </div>
+                    ) : (
+                      <select
+                        value={campaignTemplateId}
+                        onChange={(e) => setCampaignTemplateId(e.target.value)}
+                        className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white"
+                      >
+                        <option value="">Choose template</option>
+                        {emailTemplates.map((t) => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                   <div>
                     <label className="text-gray-400 text-sm block mb-1">3. Trigger schedule</label>
