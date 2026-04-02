@@ -226,7 +226,28 @@ export default function ReactivatePage() {
       }
       if (templatesRes.ok) {
         const d = await templatesRes.json();
-        setEmailTemplates(d.templates || []);
+        const customTemplates = d.templates || [];
+
+        // Also load preset templates so the dropdown is never empty
+        const presetsRes = await fetch(API_BASE + "/preset-templates", opts);
+        const presetTemplates = presetsRes.ok
+          ? ((await presetsRes.json()).presets || []).map((p: any) => ({
+              id: `preset:${p.id}`,
+              name: `${p.name} (Preset)`,
+              knowledgeBankId: null,
+              knowledgeBank: null,
+              subjectTemplate: p.subject,
+              templateId: p.id,
+              copyPrompt: null,
+              queryHint: null,
+              ctaUrl: null,
+              ctaLabel: null,
+              enabled: true,
+            }))
+          : [];
+
+        // Custom templates first, then presets as fallback
+        setEmailTemplates([...customTemplates, ...presetTemplates]);
       }
       if (sendsRes.ok) {
         const d = await sendsRes.json();
@@ -340,10 +361,11 @@ export default function ReactivatePage() {
     setSavingCampaign(true);
     try {
       const tpl = emailTemplates.find((t) => t.id === campaignTemplateId);
+      const isPreset = campaignTemplateId.startsWith("preset:");
       const payload = {
         segment_id: campaignSegmentId,
-        email_template_id: campaignTemplateId,
-        template_id: "minimal_recovery",
+        email_template_id: isPreset ? null : campaignTemplateId,
+        template_id: isPreset ? campaignTemplateId.replace("preset:", "") : (tpl?.templateId || "minimal_recovery"),
         subject_text: tpl?.subjectTemplate,
         email_field_map: campaignEmailField,
         trigger_type: campaignTriggerType,
