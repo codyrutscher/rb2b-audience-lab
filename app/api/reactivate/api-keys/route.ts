@@ -42,7 +42,46 @@ async function getWorkspaceId(userId: string): Promise<string | null> {
   const uw = await prisma.$queryRaw<{ workspace_id: string }[]>`
     SELECT workspace_id FROM user_workspaces WHERE user_id::text = ${userId} LIMIT 1
   `.catch(() => []);
-  return uw?.[0]?.workspace_id ?? null;
+
+  if (uw?.[0]?.workspace_id) return uw[0].workspace_id;
+
+  // Fallback: if no row exists, find or create a workspace and link the user
+  // First check if there's any workspace at all
+  const supabase = getServiceSupabase();
+  const { data: existingWs } = await supabase
+    .from("workspaces")
+    .select("id")
+    .limit(1)
+    .single();
+
+  let wsId: string;
+  if (existingWs?.id) {
+    wsId = existingWs.id;
+  } else {
+    // Create a workspace
+    const { data: newWs } = await supabase
+      .from("workspaces")
+      .insert({ name: "Default Workspace" })
+      .select("id")
+      .single();
+    if (!newWs?.id) return null;
+    wsId = newWs.id;
+  }
+
+  // Link user to workspace
+  await supabase.from("user_workspaces").upsert(
+    { user_id: userId, workspace_id: wsId, role: "owner" },
+    { onConflict: "user_id,workspace_id" }
+  ).catch(() => {
+    // If upsert fails (no unique constraint), try insert
+    return supabase.from("user_workspaces").insert({
+      user_id: userId,
+      workspace_id: wsId,
+      role: "owner",
+    });
+  });
+
+  return wsId;
 }
 
 /** GET /api/reactivate/api-keys — list keys for workspace */
