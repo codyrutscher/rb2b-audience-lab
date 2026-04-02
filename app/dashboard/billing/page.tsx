@@ -162,6 +162,11 @@ export default function BillingPage() {
           </div>
         )}
 
+        {/* Coming soon notice */}
+        <div className="mb-6 p-4 bg-accent-primary/10 border border-accent-primary/30 rounded-xl text-gray-300 text-sm">
+          💳 Paid plans are coming soon. You&apos;re currently on the Free plan with full access during our beta.
+        </div>
+
         {/* Current Plan Info */}
         <div className="glass neon-border rounded-xl p-6 mb-8">
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -248,13 +253,14 @@ export default function BillingPage() {
                   <button
                     onClick={() => handleUpgrade(plan.key)}
                     disabled={!!upgrading}
-                    className={`w-full py-2.5 text-sm font-medium text-white rounded-lg transition disabled:opacity-50 ${
+                    title="Stripe billing coming soon"
+                    className={`w-full py-2.5 text-sm font-medium text-white rounded-lg transition disabled:opacity-50 opacity-60 cursor-not-allowed ${
                       plan.popular
-                        ? "bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30"
-                        : "bg-accent-primary/80 hover:bg-accent-primary"
+                        ? "bg-gradient-purple"
+                        : "bg-accent-primary/80"
                     }`}
                   >
-                    {upgrading === plan.key ? "Redirecting..." : isDowngrade ? "Downgrade" : "Upgrade"}
+                    Coming Soon
                   </button>
                 )}
               </div>
