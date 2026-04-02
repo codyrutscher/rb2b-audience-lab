@@ -1,14 +1,30 @@
 import Stripe from "stripe";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.warn("STRIPE_SECRET_KEY not set — billing features disabled");
+// Lazy singleton — only instantiated when actually used, so missing key doesn't crash at build time
+let _stripe: Stripe | null = null;
+
+export function getStripe(): Stripe {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
+  if (!_stripe) {
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2024-12-18.acacia" as any,
+    });
+  }
+  return _stripe;
 }
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-12-18.acacia" as any,
+// Named export for convenience — routes that already guard for the key can use this
+export const stripe = new Proxy({} as Stripe, {
+  get(_target, prop) {
+    return (getStripe() as any)[prop];
+  },
 });
 
-// Plan definitions — update these price IDs after creating them in Stripe Dashboard
+export const STRIPE_ENABLED = !!process.env.STRIPE_SECRET_KEY;
+
+// Plan definitions — update price IDs after creating them in Stripe Dashboard
 export const PLANS = {
   free: {
     name: "Free",
@@ -36,7 +52,7 @@ export const PLANS = {
     priceId: process.env.STRIPE_ENTERPRISE_PRICE_ID || null,
     visitors: 50000,
     pixels: 25,
-    integrations: -1, // unlimited
+    integrations: -1,
     teamMembers: -1,
     features: ["50,000 visitors/mo", "25 pixels", "Unlimited integrations", "Unlimited team members", "Priority support", "Custom webhooks", "API access"],
   },

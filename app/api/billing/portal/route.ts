@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import { stripe, STRIPE_ENABLED } from "@/lib/stripe";
 import { createClient } from "@supabase/supabase-js";
 
 function getSupabase() {
@@ -11,7 +11,7 @@ function getSupabase() {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.STRIPE_SECRET_KEY) {
+    if (!STRIPE_ENABLED) {
       return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
     }
 

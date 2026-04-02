@@ -102,6 +102,8 @@ export default function BillingPage() {
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
+      } else if (res.status === 503) {
+        alert("Billing is not yet configured. Add your Stripe API keys to enable payments.");
       } else {
         alert(data.error || "Failed to create checkout session");
       }
@@ -123,6 +125,8 @@ export default function BillingPage() {
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
+      } else if (res.status === 503) {
+        alert("Billing is not yet configured. Add your Stripe API keys to enable payments.");
       } else {
         alert(data.error || "Failed to open billing portal");
       }
