@@ -48,7 +48,7 @@ export default function ApiKeysPage() {
 
     const { data, error } = await supabase
       .from("api_keys")
-      .select("*")
+      .select("id, name, key_prefix, permissions, last_used_at, created_at")
       .eq("workspace_id", wsId)
       .order("created_at", { ascending: false });
 
