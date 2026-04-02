@@ -71,7 +71,7 @@ async function getWorkspaceId(userId: string): Promise<string | null> {
     user_id: userId,
     workspace_id: existingWs.id,
     role: "owner",
-  }).catch(() => {});
+  });
 
   return existingWs.id;
 }
