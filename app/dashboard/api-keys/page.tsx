@@ -29,12 +29,17 @@ export default function ApiKeysPage() {
   async function loadApiKeys() {
     try {
       const res = await fetch("/api/reactivate/api-keys", { credentials: "include" });
+      const data = await res.json();
       if (res.ok) {
-        const data = await res.json();
         setApiKeys(data.keys || []);
+        setCreateError(null);
+      } else {
+        // Show debug info if available
+        const debugInfo = data.debug ? `\n\nDebug: ${JSON.stringify(data.debug, null, 2)}` : "";
+        setCreateError(`${data.error}${debugInfo}`);
       }
-    } catch (e) {
-      console.error("Failed to load API keys:", e);
+    } catch (e: any) {
+      setCreateError("Failed to load API keys: " + (e.message || "unknown error"));
     }
   }
 
@@ -97,6 +102,13 @@ export default function ApiKeysPage() {
             <Plus className="w-4 h-4" /> Create API Key
           </button>
         </div>
+
+        {/* Debug/Error Banner */}
+        {createError && !showForm && (
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+            <pre className="text-sm text-red-400 whitespace-pre-wrap break-all">{createError}</pre>
+          </div>
+        )}
 
         {/* New Key Modal */}
         {newKey && (

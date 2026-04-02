@@ -48,10 +48,35 @@ async function getWorkspaceId(userId: string): Promise<string | null> {
 /** GET /api/reactivate/api-keys — list keys for workspace */
 export async function GET(request: Request) {
   const userId = await getUserId(request);
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: "Unauthorized", debug: { userId: null } }, { status: 401 });
 
   const workspaceId = await getWorkspaceId(userId);
-  if (!workspaceId) return NextResponse.json({ error: "No workspace" }, { status: 404 });
+  if (!workspaceId) {
+    // Debug: try to find what's in user_workspaces for this user
+    let debugRows: any[] = [];
+    try {
+      debugRows = await prisma.$queryRaw<any[]>`
+        SELECT user_id, workspace_id, role FROM user_workspaces WHERE user_id::text = ${userId}
+      `;
+    } catch (e) {}
+
+    // Also try without ::text cast
+    let debugRows2: any[] = [];
+    try {
+      const supa = getServiceSupabase();
+      const { data } = await supa.from("user_workspaces").select("*").limit(5);
+      debugRows2 = data || [];
+    } catch (e) {}
+
+    return NextResponse.json({
+      error: "No workspace found",
+      debug: {
+        userId,
+        prismaQueryResult: debugRows,
+        firstFiveRows: debugRows2.map(r => ({ user_id: r.user_id, workspace_id: r.workspace_id, role: r.role })),
+      }
+    }, { status: 404 });
+  }
 
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
