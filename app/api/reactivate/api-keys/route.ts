@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { prisma } from "@/lib/reactivate/db";
 
 function getServiceSupabase() {
   return createClient(
@@ -37,14 +38,11 @@ async function getUserId(request: Request): Promise<string | null> {
 }
 
 async function getWorkspaceId(userId: string): Promise<string | null> {
-  const supabase = getServiceSupabase();
-  const { data } = await supabase
-    .from("user_workspaces")
-    .select("workspace_id")
-    .eq("user_id", userId)
-    .limit(1)
-    .single();
-  return data?.workspace_id ?? null;
+  // Use the same pattern as lib/reactivate/auth.ts — raw query with ::text cast
+  const uw = await prisma.$queryRaw<{ workspace_id: string }[]>`
+    SELECT workspace_id FROM user_workspaces WHERE user_id::text = ${userId} LIMIT 1
+  `.catch(() => []);
+  return uw?.[0]?.workspace_id ?? null;
 }
 
 /** GET /api/reactivate/api-keys — list keys for workspace */
