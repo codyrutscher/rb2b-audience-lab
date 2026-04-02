@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, Trash2, Key, Copy, Check, AlertCircle } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { getCurrentUser } from "@/lib/supabase-auth";
 import { formatDistanceToNow } from "date-fns";
 
 type ApiKey = {
@@ -24,73 +22,52 @@ export default function ApiKeysPage() {
   const [creating, setCreating] = useState(false);
   const [newKey, setNewKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [workspaceId, setWorkspaceId] = useState<string>("");
   const [createError, setCreateError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadApiKeys();
-  }, []);
+  useEffect(() => { loadApiKeys(); }, []);
 
   async function loadApiKeys() {
-    const user = await getCurrentUser();
-    if (!user) return;
-
-    // Get actual workspace_id from user_workspaces
-    const { data: uw } = await supabase
-      .from("user_workspaces")
-      .select("workspace_id")
-      .eq("user_id", user.id)
-      .limit(1)
-      .single();
-
-    const wsId = uw?.workspace_id || user.id;
-    setWorkspaceId(wsId);
-
-    const { data, error } = await supabase
-      .from("api_keys")
-      .select("id, name, key_prefix, permissions, last_used_at, created_at")
-      .eq("workspace_id", wsId)
-      .order("created_at", { ascending: false });
-
-    if (data) setApiKeys(data);
-    if (error) console.error("Failed to load API keys:", error.message);
+    try {
+      const res = await fetch("/api/reactivate/api-keys", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setApiKeys(data.keys || []);
+      }
+    } catch (e) {
+      console.error("Failed to load API keys:", e);
+    }
   }
 
   async function createApiKey() {
     if (!name.trim() || permissions.length === 0) return;
     setCreating(true);
     setCreateError(null);
-
     try {
-      const fullKey = `al_${crypto.randomUUID().replace(/-/g, "")}`;
-      const keyPrefix = fullKey.substring(0, 12);
-
-      const { error } = await supabase.from("api_keys").insert({
-        workspace_id: workspaceId,
-        name: name.trim(),
-        key_hash: fullKey,
-        key_prefix: keyPrefix,
-        permissions,
+      const res = await fetch("/api/reactivate/api-keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: name.trim(), permissions }),
       });
-
-      if (error) {
-        setCreateError(error.message);
-      } else {
-        setNewKey(fullKey);
+      const data = await res.json();
+      if (res.ok) {
+        setNewKey(data.key);
         setName("");
         setPermissions(["read"]);
         loadApiKeys();
+      } else {
+        setCreateError(data.error || "Failed to create API key");
       }
     } catch (err: any) {
-      setCreateError(err.message || "Unexpected error creating API key");
+      setCreateError(err.message || "Unexpected error");
     }
     setCreating(false);
   }
 
   async function deleteApiKey(id: string) {
     if (!confirm("Delete this API key? This cannot be undone.")) return;
-    const { error } = await supabase.from("api_keys").delete().eq("id", id);
-    if (!error) loadApiKeys();
+    await fetch(`/api/reactivate/api-keys?id=${id}`, { method: "DELETE", credentials: "include" });
+    loadApiKeys();
   }
 
   function togglePermission(permission: string) {
@@ -105,11 +82,6 @@ export default function ApiKeysPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  function closeNewKeyModal() {
-    setNewKey(null);
-    setShowForm(false);
-  }
-
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
@@ -122,8 +94,7 @@ export default function ApiKeysPage() {
             onClick={() => { setShowForm(true); setCreateError(null); }}
             className="flex items-center gap-2 px-4 py-2 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 text-white rounded-lg transition-all font-medium"
           >
-            <Plus className="w-4 h-4" />
-            Create API Key
+            <Plus className="w-4 h-4" /> Create API Key
           </button>
         </div>
 
@@ -133,25 +104,15 @@ export default function ApiKeysPage() {
             <div className="glass neon-border rounded-xl p-6 w-full max-w-lg">
               <h2 className="text-xl font-semibold text-white mb-4">API Key Created</h2>
               <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg mb-4">
-                <p className="text-sm text-yellow-400">
-                  ⚠️ Copy your API key now — you won&apos;t be able to see it again.
-                </p>
+                <p className="text-sm text-yellow-400">⚠️ Copy your API key now — you won&apos;t be able to see it again.</p>
               </div>
               <div className="p-4 bg-dark-tertiary rounded-lg mb-6 flex items-center justify-between gap-4">
                 <code className="text-sm text-green-400 break-all">{newKey}</code>
-                <button
-                  onClick={() => copyToClipboard(newKey)}
-                  className="flex-shrink-0 p-2 text-gray-400 hover:text-white transition"
-                >
+                <button onClick={() => copyToClipboard(newKey)} className="flex-shrink-0 p-2 text-gray-400 hover:text-white transition">
                   {copied ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
                 </button>
               </div>
-              <button
-                onClick={closeNewKeyModal}
-                className="w-full px-4 py-2 bg-gradient-purple text-white rounded-lg font-medium"
-              >
-                Done
-              </button>
+              <button onClick={() => { setNewKey(null); setShowForm(false); }} className="w-full px-4 py-2 bg-gradient-purple text-white rounded-lg font-medium">Done</button>
             </div>
           </div>
         )}
@@ -160,30 +121,18 @@ export default function ApiKeysPage() {
         {showForm && !newKey && (
           <div className="glass neon-border rounded-xl p-6 mb-6">
             <h2 className="text-xl font-semibold text-white mb-4">Create New API Key</h2>
-
             {createError && (
               <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-lg mb-4">
                 <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-sm font-medium text-red-400">Failed to create API key</div>
-                  <div className="text-sm text-red-400/80 mt-1">{createError}</div>
-                </div>
+                <div className="text-sm text-red-400">{createError}</div>
               </div>
             )}
-
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Key Name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g., Production API Key"
-                  className="w-full px-4 py-2 bg-dark-tertiary border border-dark-border rounded-lg text-white placeholder-gray-500 focus:border-accent-primary focus:outline-none transition"
-                  autoFocus
-                />
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Production API Key" autoFocus
+                  className="w-full px-4 py-2 bg-dark-tertiary border border-dark-border rounded-lg text-white placeholder-gray-500 focus:border-accent-primary focus:outline-none transition" />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Permissions</label>
                 <div className="space-y-2">
@@ -193,35 +142,21 @@ export default function ApiKeysPage() {
                     { key: "delete", label: "Delete", desc: "Remove visitor data" },
                   ].map(({ key, label, desc }) => (
                     <label key={key} className="flex items-center gap-3 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={permissions.includes(key)}
-                        onChange={() => togglePermission(key)}
-                        className="w-4 h-4 accent-accent-primary"
-                      />
+                      <input type="checkbox" checked={permissions.includes(key)} onChange={() => togglePermission(key)} className="w-4 h-4 accent-accent-primary" />
                       <span className="text-sm text-gray-300 group-hover:text-white transition">
-                        <span className="font-medium">{label}</span>
-                        <span className="text-gray-500"> — {desc}</span>
+                        <span className="font-medium">{label}</span><span className="text-gray-500"> — {desc}</span>
                       </span>
                     </label>
                   ))}
                 </div>
               </div>
-
               <div className="flex gap-2 pt-2">
-                <button
-                  onClick={createApiKey}
-                  disabled={creating || !name.trim() || permissions.length === 0}
-                  className="px-4 py-2 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 disabled:opacity-50 text-white rounded-lg transition-all font-medium"
-                >
+                <button onClick={createApiKey} disabled={creating || !name.trim() || permissions.length === 0}
+                  className="px-4 py-2 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 disabled:opacity-50 text-white rounded-lg transition-all font-medium">
                   {creating ? "Creating..." : "Create Key"}
                 </button>
-                <button
-                  onClick={() => { setShowForm(false); setCreateError(null); }}
-                  className="px-4 py-2 bg-dark-tertiary hover:bg-dark-border text-gray-300 rounded-lg transition"
-                >
-                  Cancel
-                </button>
+                <button onClick={() => { setShowForm(false); setCreateError(null); }}
+                  className="px-4 py-2 bg-dark-tertiary hover:bg-dark-border text-gray-300 rounded-lg transition">Cancel</button>
               </div>
             </div>
           </div>
@@ -236,66 +171,48 @@ export default function ApiKeysPage() {
             {apiKeys.map((apiKey) => (
               <div key={apiKey.id} className="p-6 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="p-2 bg-accent-primary/20 rounded-lg flex-shrink-0">
-                    <Key className="w-5 h-5 text-accent-primary" />
-                  </div>
+                  <div className="p-2 bg-accent-primary/20 rounded-lg flex-shrink-0"><Key className="w-5 h-5 text-accent-primary" /></div>
                   <div className="min-w-0">
                     <div className="font-medium text-white">{apiKey.name}</div>
                     <div className="text-sm text-gray-400 space-y-0.5 mt-1">
                       <div className="font-mono">{apiKey.key_prefix}••••••••••••</div>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="flex gap-1">
-                          {apiKey.permissions.map((p) => (
+                          {(apiKey.permissions || []).map((p: string) => (
                             <span key={p} className="px-1.5 py-0.5 bg-dark-tertiary rounded text-xs text-gray-400 capitalize">{p}</span>
                           ))}
                         </span>
                         <span className="text-gray-600">·</span>
                         <span>Created {formatDistanceToNow(new Date(apiKey.created_at), { addSuffix: true })}</span>
-                        {apiKey.last_used_at && (
-                          <>
-                            <span className="text-gray-600">·</span>
-                            <span>Last used {formatDistanceToNow(new Date(apiKey.last_used_at), { addSuffix: true })}</span>
-                          </>
-                        )}
                       </div>
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => deleteApiKey(apiKey.id)}
-                  className="text-gray-500 hover:text-red-400 transition flex-shrink-0"
-                >
+                <button onClick={() => deleteApiKey(apiKey.id)} className="text-gray-500 hover:text-red-400 transition flex-shrink-0">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ))}
-
             {apiKeys.length === 0 && (
               <div className="text-center py-12">
                 <Key className="w-12 h-12 text-gray-600 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-white mb-2">No API keys yet</h3>
                 <p className="text-gray-400 mb-4">Create your first API key to access the API programmatically</p>
-                <button
-                  onClick={() => setShowForm(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 text-white rounded-lg transition-all font-medium"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create API Key
+                <button onClick={() => setShowForm(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-purple hover:shadow-lg hover:shadow-accent-primary/30 text-white rounded-lg transition-all font-medium">
+                  <Plus className="w-4 h-4" /> Create API Key
                 </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Docs callout */}
         <div className="mt-6 p-4 glass neon-border rounded-xl">
           <h3 className="font-semibold text-white mb-1">Using the API</h3>
           <p className="text-sm text-gray-400 mb-2">
             Pass your API key in the <code className="text-accent-primary">Authorization</code> header as <code className="text-accent-primary">Bearer &lt;key&gt;</code>.
           </p>
-          <Link href="/docs" className="text-sm text-accent-primary hover:underline">
-            View API Documentation →
-          </Link>
+          <Link href="/docs" className="text-sm text-accent-primary hover:underline">View API Documentation →</Link>
         </div>
       </div>
     </div>
