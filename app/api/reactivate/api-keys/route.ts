@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { prisma } from "@/lib/reactivate/db";
 
 function getServiceSupabase() {
   return createClient(
@@ -38,50 +37,43 @@ async function getUserId(request: Request): Promise<string | null> {
 }
 
 async function getWorkspaceId(userId: string): Promise<string | null> {
-  // Use the same pattern as lib/reactivate/auth.ts — raw query with ::text cast
-  const uw = await prisma.$queryRaw<{ workspace_id: string }[]>`
-    SELECT workspace_id FROM user_workspaces WHERE user_id::text = ${userId} LIMIT 1
-  `.catch(() => []);
-
-  if (uw?.[0]?.workspace_id) return uw[0].workspace_id;
-
-  // Fallback: if no row exists, find or create a workspace and link the user
-  // First check if there's any workspace at all
+  // Use service role client — Prisma raw query was returning empty despite row existing
   const supabase = getServiceSupabase();
+  const { data } = await supabase
+    .from("user_workspaces")
+    .select("workspace_id")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+
+  if (data?.workspace_id) return data.workspace_id;
+
+  // Fallback: try text filter in case of type mismatch
+  const { data: data2 } = await supabase
+    .from("user_workspaces")
+    .select("workspace_id")
+    .filter("user_id", "eq", userId)
+    .limit(1)
+    .maybeSingle();
+
+  if (data2?.workspace_id) return data2.workspace_id;
+
+  // Last resort: find any workspace and link user
   const { data: existingWs } = await supabase
     .from("workspaces")
     .select("id")
     .limit(1)
     .single();
 
-  let wsId: string;
-  if (existingWs?.id) {
-    wsId = existingWs.id;
-  } else {
-    // Create a workspace
-    const { data: newWs } = await supabase
-      .from("workspaces")
-      .insert({ name: "Default Workspace" })
-      .select("id")
-      .single();
-    if (!newWs?.id) return null;
-    wsId = newWs.id;
-  }
+  if (!existingWs?.id) return null;
 
-  // Link user to workspace
-  await supabase.from("user_workspaces").upsert(
-    { user_id: userId, workspace_id: wsId, role: "owner" },
-    { onConflict: "user_id,workspace_id" }
-  ).catch(() => {
-    // If upsert fails (no unique constraint), try insert
-    return supabase.from("user_workspaces").insert({
-      user_id: userId,
-      workspace_id: wsId,
-      role: "owner",
-    });
-  });
+  await supabase.from("user_workspaces").insert({
+    user_id: userId,
+    workspace_id: existingWs.id,
+    role: "owner",
+  }).catch(() => {});
 
-  return wsId;
+  return existingWs.id;
 }
 
 /** GET /api/reactivate/api-keys — list keys for workspace */
@@ -91,28 +83,17 @@ export async function GET(request: Request) {
 
   const workspaceId = await getWorkspaceId(userId);
   if (!workspaceId) {
-    // Debug: try to find what's in user_workspaces for this user
-    let debugRows: any[] = [];
-    try {
-      debugRows = await prisma.$queryRaw<any[]>`
-        SELECT user_id, workspace_id, role FROM user_workspaces WHERE user_id::text = ${userId}
-      `;
-    } catch (e) {}
-
-    // Also try without ::text cast
-    let debugRows2: any[] = [];
-    try {
-      const supa = getServiceSupabase();
-      const { data } = await supa.from("user_workspaces").select("*").limit(5);
-      debugRows2 = data || [];
-    } catch (e) {}
+    // Debug info
+    const supa = getServiceSupabase();
+    const { data: allRows } = await supa.from("user_workspaces").select("user_id, workspace_id, role").limit(5);
+    const { data: directMatch } = await supa.from("user_workspaces").select("workspace_id").eq("user_id", userId);
 
     return NextResponse.json({
       error: "No workspace found",
       debug: {
         userId,
-        prismaQueryResult: debugRows,
-        firstFiveRows: debugRows2.map(r => ({ user_id: r.user_id, workspace_id: r.workspace_id, role: r.role })),
+        directEqResult: directMatch,
+        firstFiveRows: (allRows || []).map((r: any) => ({ user_id: r.user_id, workspace_id: r.workspace_id, role: r.role })),
       }
     }, { status: 404 });
   }
