@@ -1,21 +1,24 @@
 import Link from "next/link";
-import { Eye, Code, Database, Zap } from "lucide-react";
+import { Eye, Code, Database, Zap, Sparkles, ArrowLeft } from "lucide-react";
 
 export default function Docs() {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <nav className="bg-white border-b">
+    <div className="min-h-screen bg-dark-bg">
+      <nav className="border-b border-dark-border glass">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="flex items-center gap-2">
-              <Eye className="w-6 h-6 text-purple-600" />
-              <span className="text-xl font-bold">Audience Lab</span>
+            <Link href="/" className="flex items-center gap-2 group">
+              <div className="relative">
+                <Eye className="w-6 h-6 text-accent-primary" />
+                <Sparkles className="w-3 h-3 text-accent-secondary absolute -top-1 -right-1 animate-pulse-slow" />
+              </div>
+              <span className="text-xl font-bold gradient-text">Audience Lab</span>
             </Link>
             <div className="flex gap-4">
-              <Link href="/dashboard" className="text-gray-600 hover:text-gray-900">
+              <Link href="/dashboard" className="text-gray-400 hover:text-white transition">
                 Dashboard
               </Link>
-              <Link href="/docs" className="text-purple-600 font-medium">
+              <Link href="/docs" className="text-accent-primary font-medium">
                 Docs
               </Link>
             </div>
@@ -24,8 +27,11 @@ export default function Docs() {
       </nav>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="text-4xl font-bold mb-4">Documentation</h1>
-        <p className="text-xl text-gray-600 mb-12">
+        <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-white transition mb-6">
+          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+        </Link>
+        <h1 className="text-4xl font-bold text-white mb-4">Documentation</h1>
+        <p className="text-xl text-gray-400 mb-12">
           Get started with Audience Lab in minutes
         </p>
 
@@ -34,24 +40,24 @@ export default function Docs() {
           <ol className="list-decimal list-inside space-y-2 mb-4">
             <li>Go to your Supabase project dashboard</li>
             <li>Navigate to SQL Editor</li>
-            <li>Copy the contents of <code className="bg-gray-100 px-2 py-1 rounded">supabase/schema.sql</code></li>
+            <li>Copy the contents of <code className="bg-dark-tertiary px-2 py-1 rounded text-accent-primary">supabase/schema.sql</code></li>
             <li>Paste and run the SQL</li>
           </ol>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-500">
             The schema includes visitors and page_views tables, indexes, RLS policies, and real-time subscriptions.
           </p>
         </Section>
 
         <Section icon={<Code />} title="2. Install Tracking Script">
           <p className="mb-4">Add this script to your website&apos;s HTML:</p>
-          <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
+          <pre className="bg-dark-tertiary border border-dark-border text-green-400 p-4 rounded-lg overflow-x-auto text-sm">
 {`<script src="https://your-domain.vercel.app/track.js"></script>`}
           </pre>
         </Section>
 
         <Section icon={<Zap />} title="3. Identify Visitors">
           <p className="mb-4">When you capture user info (form submission, login, etc.), call:</p>
-          <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
+          <pre className="bg-dark-tertiary border border-dark-border text-green-400 p-4 rounded-lg overflow-x-auto text-sm">
 {`audienceLabIdentify({
   email: 'user@company.com',
   name: 'John Doe',
@@ -61,12 +67,12 @@ export default function Docs() {
           </pre>
         </Section>
 
-        <div className="mt-12 p-6 bg-purple-50 rounded-lg border border-purple-200">
-          <h3 className="font-semibold text-lg mb-2">Environment Variables</h3>
-          <p className="text-sm text-gray-700 mb-4">
+        <div className="mt-12 p-6 glass neon-border rounded-xl">
+          <h3 className="font-semibold text-lg text-white mb-2">Environment Variables</h3>
+          <p className="text-sm text-gray-400 mb-4">
             Copy .env.example to .env and add your Supabase credentials
           </p>
-          <pre className="bg-white p-3 rounded text-sm">
+          <pre className="bg-dark-tertiary border border-dark-border p-4 rounded-lg text-sm text-green-400 overflow-x-auto">
 {`NEXT_PUBLIC_SUPABASE_URL=your-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-key`}
@@ -81,10 +87,10 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
   return (
     <div className="mb-12">
       <div className="flex items-center gap-3 mb-4">
-        <div className="text-purple-600">{icon}</div>
-        <h2 className="text-2xl font-bold">{title}</h2>
+        <div className="text-accent-primary">{icon}</div>
+        <h2 className="text-2xl font-bold text-white">{title}</h2>
       </div>
-      <div className="text-gray-700">{children}</div>
+      <div className="text-gray-300">{children}</div>
     </div>
   );
 }
