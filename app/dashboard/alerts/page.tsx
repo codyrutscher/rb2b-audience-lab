@@ -22,6 +22,9 @@ export default function AlertsPage() {
   const [conditionType, setConditionType] = useState("visitor_identified");
   const [conditionValue, setConditionValue] = useState("");
   const [actionType, setActionType] = useState("slack");
+  const [actionSlackUrl, setActionSlackUrl] = useState("");
+  const [actionEmail, setActionEmail] = useState("");
+  const [actionWebhookUrl, setActionWebhookUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [workspaceId, setWorkspaceId] = useState<string>("");
 
@@ -67,6 +70,9 @@ export default function AlertsPage() {
 
       const actions = {
         type: actionType,
+        ...(actionType === "slack" ? { slack_webhook_url: actionSlackUrl } : {}),
+        ...(actionType === "email" ? { email_to: actionEmail } : {}),
+        ...(actionType === "webhook" ? { webhook_url: actionWebhookUrl } : {}),
       };
 
       if (editingAlert) {
@@ -120,6 +126,9 @@ export default function AlertsPage() {
     setConditionType(alert.conditions?.type || "visitor_identified");
     setConditionValue(alert.conditions?.value || "");
     setActionType(alert.actions?.type || "slack");
+    setActionSlackUrl(alert.actions?.slack_webhook_url || "");
+    setActionEmail(alert.actions?.email_to || "");
+    setActionWebhookUrl(alert.actions?.webhook_url || "");
     setShowForm(true);
   }
 
@@ -130,6 +139,9 @@ export default function AlertsPage() {
     setConditionType("visitor_identified");
     setConditionValue("");
     setActionType("slack");
+    setActionSlackUrl("");
+    setActionEmail("");
+    setActionWebhookUrl("");
   }
 
   return (
@@ -233,6 +245,64 @@ export default function AlertsPage() {
                 </select>
               </div>
 
+              {/* Action configuration */}
+              {actionType === "slack" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Slack Webhook URL
+                  </label>
+                  <input
+                    type="url"
+                    value={actionSlackUrl}
+                    onChange={(e) => setActionSlackUrl(e.target.value)}
+                    placeholder="https://hooks.slack.com/services/T.../B.../..."
+                    className="w-full px-4 py-2 bg-dark-tertiary border border-dark-border rounded-lg text-white placeholder-gray-500 focus:border-accent-primary focus:outline-none transition"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Create an incoming webhook in your Slack workspace at{" "}
+                    <a href="https://api.slack.com/messaging/webhooks" target="_blank" rel="noopener noreferrer" className="text-accent-primary hover:underline">
+                      api.slack.com/messaging/webhooks
+                    </a>
+                  </p>
+                </div>
+              )}
+
+              {actionType === "email" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={actionEmail}
+                    onChange={(e) => setActionEmail(e.target.value)}
+                    placeholder="alerts@yourcompany.com"
+                    className="w-full px-4 py-2 bg-dark-tertiary border border-dark-border rounded-lg text-white placeholder-gray-500 focus:border-accent-primary focus:outline-none transition"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Alert details will be sent to this email when the condition is triggered.
+                  </p>
+                </div>
+              )}
+
+              {actionType === "webhook" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Webhook URL
+                  </label>
+                  <input
+                    type="url"
+                    value={actionWebhookUrl}
+                    onChange={(e) => setActionWebhookUrl(e.target.value)}
+                    placeholder="https://your-api.com/alerts/webhook"
+                    className="w-full px-4 py-2 bg-dark-tertiary border border-dark-border rounded-lg text-white placeholder-gray-500 focus:border-accent-primary focus:outline-none transition"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    A POST request with alert details (JSON) will be sent to this URL when triggered.
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-2">
                 <button
                   onClick={saveAlert}
@@ -277,6 +347,22 @@ export default function AlertsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="ml-6">Then: Send {alert.actions?.type} notification</span>
+                        {alert.actions?.slack_webhook_url && (
+                          <span className="text-gray-500 text-xs truncate max-w-[200px]" title={alert.actions.slack_webhook_url}>
+                            → {alert.actions.slack_webhook_url.replace('https://hooks.slack.com/services/', 'hooks.slack.com/...')}
+                          </span>
+                        )}
+                        {alert.actions?.email_to && (
+                          <span className="text-gray-500 text-xs">→ {alert.actions.email_to}</span>
+                        )}
+                        {alert.actions?.webhook_url && (
+                          <span className="text-gray-500 text-xs truncate max-w-[200px]" title={alert.actions.webhook_url}>
+                            → {alert.actions.webhook_url}
+                          </span>
+                        )}
+                        {!alert.actions?.slack_webhook_url && !alert.actions?.email_to && !alert.actions?.webhook_url && (
+                          <span className="text-yellow-400 text-xs">⚠ Not configured</span>
+                        )}
                       </div>
                     </div>
                   </div>
