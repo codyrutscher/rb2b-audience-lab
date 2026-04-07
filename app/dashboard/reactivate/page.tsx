@@ -224,30 +224,20 @@ export default function ReactivatePage() {
         const d = await campaignsRes.json();
         setCampaigns(d.segment_campaigns || []);
       }
+      // Hardcoded preset templates — always available, no knowledge base needed
+      const presetTemplates = [
+        { id: "preset:browse_reminder", name: "Browse Reminder (Preset)", knowledgeBankId: null, knowledgeBank: null, subjectTemplate: "You left something behind", templateId: "browse_reminder", copyPrompt: null, queryHint: null, ctaUrl: null, ctaLabel: null, enabled: true },
+        { id: "preset:product_interest", name: "Product Interest (Preset)", knowledgeBankId: null, knowledgeBank: null, subjectTemplate: "Still thinking it over?", templateId: "product_interest", copyPrompt: null, queryHint: null, ctaUrl: null, ctaLabel: null, enabled: true },
+        { id: "preset:reengagement", name: "Re-engagement (Preset)", knowledgeBankId: null, knowledgeBank: null, subjectTemplate: "We miss you", templateId: "reengagement", copyPrompt: null, queryHint: null, ctaUrl: null, ctaLabel: null, enabled: true },
+      ];
+
       if (templatesRes.ok) {
         const d = await templatesRes.json();
         const customTemplates = d.templates || [];
-
-        // Also load preset templates so the dropdown is never empty
-        const presetsRes = await fetch(API_BASE + "/preset-templates", opts);
-        const presetTemplates = presetsRes.ok
-          ? ((await presetsRes.json()).presets || []).map((p: any) => ({
-              id: `preset:${p.id}`,
-              name: `${p.name} (Preset)`,
-              knowledgeBankId: null,
-              knowledgeBank: null,
-              subjectTemplate: p.subject,
-              templateId: p.id,
-              copyPrompt: null,
-              queryHint: null,
-              ctaUrl: null,
-              ctaLabel: null,
-              enabled: true,
-            }))
-          : [];
-
-        // Custom templates first, then presets as fallback
         setEmailTemplates([...customTemplates, ...presetTemplates]);
+      } else {
+        // Even if the API fails, presets are always available
+        setEmailTemplates(presetTemplates);
       }
       if (sendsRes.ok) {
         const d = await sendsRes.json();
