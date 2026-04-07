@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, Bell, AlertCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Edit2, Trash2, Bell, AlertCircle, MoreVertical, Power, PowerOff } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentUser } from "@/lib/supabase-auth";
 
@@ -27,9 +27,21 @@ export default function AlertsPage() {
   const [actionWebhookUrl, setActionWebhookUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [workspaceId, setWorkspaceId] = useState<string>("");
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadAlerts();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpenId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   async function loadAlerts() {
@@ -367,29 +379,36 @@ export default function AlertsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="relative" ref={menuOpenId === alert.id ? menuRef : undefined}>
                   <button
-                    onClick={() => toggleAlert(alert.id, alert.enabled)}
-                    className={`px-3 py-1 rounded text-sm font-medium transition ${
-                      alert.enabled 
-                        ? 'bg-dark-tertiary hover:bg-dark-border text-gray-300' 
-                        : 'bg-green-500/20 hover:bg-green-500/30 text-green-400'
-                    }`}
+                    onClick={() => setMenuOpenId(menuOpenId === alert.id ? null : alert.id)}
+                    className="p-2 text-gray-400 hover:text-white hover:bg-dark-tertiary rounded-lg transition"
                   >
-                    {alert.enabled ? 'Disable' : 'Enable'}
+                    <MoreVertical className="w-5 h-5" />
                   </button>
-                  <button
-                    onClick={() => editAlert(alert)}
-                    className="p-2 text-gray-400 hover:text-accent-primary transition"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => deleteAlert(alert.id)}
-                    className="p-2 text-gray-400 hover:text-red-400 transition"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {menuOpenId === alert.id && (
+                    <div className="absolute right-0 top-10 z-20 w-44 bg-dark-secondary border border-dark-border rounded-lg shadow-xl overflow-hidden">
+                      <button
+                        onClick={() => { editAlert(alert); setMenuOpenId(null); }}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-dark-tertiary hover:text-white transition text-left"
+                      >
+                        <Edit2 className="w-4 h-4" /> Edit
+                      </button>
+                      <button
+                        onClick={() => { toggleAlert(alert.id, alert.enabled); setMenuOpenId(null); }}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-dark-tertiary hover:text-white transition text-left"
+                      >
+                        {alert.enabled ? <PowerOff className="w-4 h-4" /> : <Power className="w-4 h-4" />}
+                        {alert.enabled ? "Disable" : "Enable"}
+                      </button>
+                      <button
+                        onClick={() => { deleteAlert(alert.id); setMenuOpenId(null); }}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition text-left"
+                      >
+                        <Trash2 className="w-4 h-4" /> Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
