@@ -750,7 +750,7 @@ export default function ReactivatePage() {
                     </div>
                   )}
                   <div>
-                    <label className="text-gray-400 text-sm block mb-1">Campaign Name</label>
+                    <label className="text-gray-400 text-sm block mb-1">Campaign Name *</label>
                     <input
                       type="text"
                       value={campaignName}
