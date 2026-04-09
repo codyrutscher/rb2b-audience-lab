@@ -128,6 +128,19 @@ export async function POST(
       );
     }
 
+    // Trigger alerts for the generated visitors
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_BASE_URL || "http://localhost:3000";
+    for (const v of visitors) {
+      const eventType = v.identified ? "visitor_identified" : "visitor_arrived";
+      try {
+        await fetch(`${appUrl}/api/reactivate/alerts/trigger`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workspace_id: account.workspaceId, event_type: eventType, visitor: v }),
+        });
+      } catch {}
+    }
+
     return NextResponse.json({ 
       success: true, 
       count: visitors.length,

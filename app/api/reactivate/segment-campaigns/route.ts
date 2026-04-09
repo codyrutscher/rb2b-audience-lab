@@ -45,21 +45,42 @@ export async function POST(request: NextRequest) {
     trigger_interval_type,
     trigger_interval_value,
   } = body;
-  if (!segment_id || !email_template_id?.trim()) {
+  if (!segment_id) {
     return NextResponse.json(
-      { error: "segment_id and email_template_id are required" },
+      { error: "segment_id is required" },
       { status: 400 }
     );
   }
-  const tpl = await prisma.rtEmailTemplate.findFirst({
-    where: { id: email_template_id.trim(), accountId },
-    select: { knowledgeBankId: true, copyPrompt: true, subjectTemplate: true, templateId: true, ctaUrl: true, ctaLabel: true, queryHint: true },
-  });
-  if (!tpl) {
-    return NextResponse.json({ error: "Email template not found" }, { status: 404 });
+
+  // Resolve template — either from a saved email_template_id or a preset template_id
+  let knowledge_bank_id_resolved: string | null = null;
+  let templateIdResolved: string = template_id?.trim() || "minimal_recovery";
+  let resolvedSubject = subject_text?.trim() || "We have something for you";
+  let resolvedCtaUrl = cta_url?.trim() || null;
+  let resolvedCtaLabel = cta_label?.trim() || null;
+  let resolvedQueryHint = query_hint?.trim() || null;
+  let resolvedCopyPrompt = copy_prompt ?? null;
+  let emailTemplateIdToStore: string | null = null;
+
+  if (email_template_id?.trim()) {
+    // Custom template from DB
+    const tpl = await prisma.rtEmailTemplate.findFirst({
+      where: { id: email_template_id.trim(), accountId },
+      select: { knowledgeBankId: true, copyPrompt: true, subjectTemplate: true, templateId: true, ctaUrl: true, ctaLabel: true, queryHint: true },
+    });
+    if (!tpl) {
+      return NextResponse.json({ error: "Email template not found" }, { status: 404 });
+    }
+    knowledge_bank_id_resolved = tpl.knowledgeBankId;
+    templateIdResolved = template_id?.trim() || tpl.templateId;
+    resolvedSubject = subject_text?.trim() || tpl.subjectTemplate;
+    resolvedCtaUrl = cta_url?.trim() || tpl.ctaUrl || null;
+    resolvedCtaLabel = cta_label?.trim() || tpl.ctaLabel || null;
+    resolvedQueryHint = query_hint?.trim() || tpl.queryHint || null;
+    resolvedCopyPrompt = copy_prompt ?? tpl.copyPrompt ?? null;
+    emailTemplateIdToStore = email_template_id.trim();
   }
-  const knowledge_bank_id_resolved = tpl.knowledgeBankId;
-  const templateIdResolved = (template_id?.trim() || tpl.templateId) as (typeof TEMPLATE_IDS)[number];
+  // else: using a preset template — no DB template needed
   if (enabled === true && (!email_field_map?.trim() || !EMAIL_FIELD_MAP_OPTIONS.includes(email_field_map.trim() as (typeof EMAIL_FIELD_MAP_OPTIONS)[number]))) {
     return NextResponse.json(
       { error: "When enabling, email_field_map is required and must be one of: " + EMAIL_FIELD_MAP_OPTIONS.join(", ") },
@@ -86,28 +107,31 @@ export async function POST(request: NextRequest) {
       );
     }
   }
-  const [segment, kb] = await Promise.all([
-    prisma.rtSegment.findFirst({ where: { id: segment_id, accountId } }),
-    prisma.rtKnowledgeBank.findFirst({ where: { id: knowledge_bank_id_resolved, accountId } }),
-  ]);
+  const segment = await prisma.rtSegment.findFirst({ where: { id: segment_id, accountId } });
   if (!segment) {
     return NextResponse.json({ error: "Segment not found" }, { status: 400 });
   }
-  if (!kb) {
-    return NextResponse.json({ error: "Knowledge bank not found" }, { status: 400 });
+
+  // Knowledge bank is optional for preset templates
+  if (knowledge_bank_id_resolved) {
+    const kb = await prisma.rtKnowledgeBank.findFirst({ where: { id: knowledge_bank_id_resolved, accountId } });
+    if (!kb) {
+      return NextResponse.json({ error: "Knowledge bank not found" }, { status: 400 });
+    }
   }
+
   const campaign = await prisma.rtSegmentCampaign.create({
     data: {
       accountId,
       segmentId: segment_id,
       knowledgeBankId: knowledge_bank_id_resolved,
-      emailTemplateId: email_template_id.trim(),
-      templateId: templateIdResolved,
-      subjectText: subject_text?.trim() || tpl.subjectTemplate,
-      ctaUrl: (cta_url?.trim() || tpl.ctaUrl) ?? null,
-      ctaLabel: (cta_label?.trim() || tpl.ctaLabel) ?? null,
-      queryHint: (query_hint?.trim() || tpl.queryHint) ?? null,
-      copyPrompt: copy_prompt ?? tpl.copyPrompt ?? null,
+      emailTemplateId: emailTemplateIdToStore,
+      templateId: templateIdResolved as any,
+      subjectText: resolvedSubject,
+      ctaUrl: resolvedCtaUrl,
+      ctaLabel: resolvedCtaLabel,
+      queryHint: resolvedQueryHint,
+      copyPrompt: resolvedCopyPrompt,
       emailFieldMap: email_field_map?.trim() || null,
       triggerType: triggerTypeVal,
       triggerIntervalType: triggerTypeVal === "scheduled" ? trigger_interval_type?.trim() : null,

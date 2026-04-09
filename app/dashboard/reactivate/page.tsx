@@ -146,6 +146,7 @@ export default function ReactivatePage() {
   const [savingSchedule, setSavingSchedule] = useState(false);
   const [showCampaignForm, setShowCampaignForm] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<SegmentCampaign | null>(null);
+  const [campaignName, setCampaignName] = useState("");
   const [campaignSegmentId, setCampaignSegmentId] = useState("");
   const [campaignTemplateId, setCampaignTemplateId] = useState("");
   const [campaignEmailField, setCampaignEmailField] = useState<string>(EMAIL_FIELD_OPTIONS[0]);
@@ -386,6 +387,7 @@ export default function ReactivatePage() {
   }
 
   function resetCampaignForm() {
+    setCampaignName("");
     setCampaignSegmentId("");
     setCampaignTemplateId("");
     setCampaignEmailField(EMAIL_FIELD_OPTIONS[0]);
@@ -397,6 +399,7 @@ export default function ReactivatePage() {
 
   function loadCampaignIntoForm(c: SegmentCampaign) {
     setEditingCampaign(c);
+    setCampaignName((c as any).name || c.segment?.name || "");
     setCampaignSegmentId(c.segmentId);
     setCampaignTemplateId(c.emailTemplateId || "");
     setCampaignEmailField(c.emailFieldMap || EMAIL_FIELD_OPTIONS[0]);
@@ -731,28 +734,31 @@ export default function ReactivatePage() {
                 {" · "}
                 <a href="/dashboard/templates" className="text-accent-primary hover:underline">Templates</a>
               </p>
-              {emailTemplates.length === 0 && (
-                <div className="mb-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm text-yellow-400 flex items-center gap-2">
-                  <span>⚠️</span>
-                  <span>
-                    You need at least one email template before creating a campaign.{" "}
-                    <a href="/dashboard/templates" className="underline font-medium hover:text-yellow-300">
-                      Go to Templates →
-                    </a>
-                  </span>
-                </div>
-              )}
               {!showCampaignForm ? (
                 <button
-                  onClick={() => { setShowCampaignForm(true); setEditingCampaign(null); resetCampaignForm(); }}
-                  disabled={emailTemplates.length === 0}
-                  title={emailTemplates.length === 0 ? "Create a template first before creating a campaign" : undefined}
-                  className="flex items-center gap-2 px-3 py-2 text-accent-primary hover:bg-accent-primary/10 rounded disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={() => { setShowCampaignForm(true); setEditingCampaign(null); resetCampaignForm(); setError(null); }}
+                  className="flex items-center gap-2 px-3 py-2 text-accent-primary hover:bg-accent-primary/10 rounded"
                 >
                   <Plus className="w-4 h-4" /> New Campaign
                 </button>
               ) : (
                 <div className="bg-dark-secondary border border-dark-border rounded-lg p-4 space-y-3 max-w-2xl mb-4">
+                  {/* Error at top of form */}
+                  {error && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+                      {error}
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-gray-400 text-sm block mb-1">Campaign Name</label>
+                    <input
+                      type="text"
+                      value={campaignName}
+                      onChange={(e) => setCampaignName(e.target.value)}
+                      placeholder="e.g., Welcome Back Campaign"
+                      className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded text-white"
+                    />
+                  </div>
                   <div>
                     <label className="text-gray-400 text-sm block mb-1">Segment</label>
                     <select
