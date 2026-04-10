@@ -332,16 +332,21 @@ export default function ReactivatePage() {
   }
 
   async function saveCampaign() {
+    function showFormError(msg: string) {
+      setError(msg);
+      setTimeout(() => document.getElementById("campaign-form-error")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+    }
+
     if (!campaignSegmentId) {
-      setError("Select a segment.");
+      showFormError("Select a segment.");
       return;
     }
     if (!campaignTemplateId) {
-      setError("Select an email template (required).");
+      showFormError("Select an email template (required).");
       return;
     }
     if (campaignEnabled && !campaignEmailField) {
-      setError("Select an email field when launching.");
+      showFormError("Select an email field when launching.");
       return;
     }
     if (campaignTriggerType === "scheduled" && (!campaignTriggerIntervalValue || campaignTriggerIntervalValue < 1)) {
@@ -380,7 +385,7 @@ export default function ReactivatePage() {
       resetCampaignForm();
       loadAll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save campaign");
+      showFormError(e instanceof Error ? e.message : "Failed to save campaign");
     } finally {
       setSavingCampaign(false);
     }
@@ -498,7 +503,7 @@ export default function ReactivatePage() {
                 <div className="bg-dark-secondary border border-dark-border rounded-lg p-4 space-y-3 max-w-2xl mb-4">
                   {/* Error at top of form */}
                   {error && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+                    <div id="campaign-form-error" className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
                       {error}
                     </div>
                   )}
@@ -732,12 +737,6 @@ export default function ReactivatePage() {
           </div>
         )}
       </section>
-
-      {error && (
-        <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded text-red-400 text-sm">
-          {error}
-        </div>
-      )}
     </div>
   );
 }
