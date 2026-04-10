@@ -30,6 +30,8 @@ export default function TeamPage() {
   const [role, setRole] = useState("member");
   const [sending, setSending] = useState(false);
   const [workspaceId, setWorkspaceId] = useState<string>("");
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
 
   useEffect(() => {
     loadTeam();
@@ -75,26 +77,28 @@ export default function TeamPage() {
 
   async function sendInvitation() {
     if (!email.trim()) return;
-    
     setSending(true);
+    setInviteError(null);
+    setInviteSuccess(false);
     try {
-      const { error } = await supabase
-        .from('team_invitations')
-        .insert({
-          workspace_id: workspaceId,
-          email,
-          role,
-          status: 'pending',
-        });
-
-      if (!error) {
+      const res = await fetch("/api/reactivate/team/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: email.trim(), role }),
+      });
+      const data = await res.json();
+      if (res.ok) {
         setEmail("");
         setRole("member");
+        setInviteSuccess(true);
         setShowInviteForm(false);
         loadTeam();
+      } else {
+        setInviteError(data.error || "Failed to send invitation");
       }
-    } catch (error) {
-      console.error('Error sending invitation:', error);
+    } catch (err: any) {
+      setInviteError(err.message || "Network error");
     }
     setSending(false);
   }
@@ -139,9 +143,21 @@ export default function TeamPage() {
           </button>
         </div>
 
+        {inviteSuccess && (
+          <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm">
+            Invitation sent successfully{process.env.NEXT_PUBLIC_RESEND_CONFIGURED ? " — an email has been sent" : " — email sending requires Resend configuration"}.
+          </div>
+        )}
+
         {showInviteForm && (
           <div className="glass neon-border rounded-xl p-6 mb-6">
             <h2 className="text-xl font-semibold text-white mb-4">Invite Team Member</h2>
+
+            {inviteError && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+                {inviteError}
+              </div>
+            )}
             
             <div className="space-y-4">
               <div>
@@ -181,7 +197,7 @@ export default function TeamPage() {
                   {sending ? 'Sending...' : 'Send Invitation'}
                 </button>
                 <button
-                  onClick={() => setShowInviteForm(false)}
+                  onClick={() => { setShowInviteForm(false); setInviteError(null); }}
                   className="px-4 py-2 bg-dark-tertiary hover:bg-dark-border text-gray-300 rounded-lg transition"
                 >
                   Cancel
